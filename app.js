@@ -84,10 +84,10 @@ async function send() {
   const w = say('…');
   try {
     const r = await fetch(C.WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.access_token }, body: JSON.stringify({ prompt: prompt_(t) }) });
-    if (!r.ok) throw 0; const j = JSON.parse((await r.json()).text);
+    const raw = await r.text(); if (!r.ok) throw new Error(r.status + ' ' + raw.slice(0, 200)); const j = JSON.parse(JSON.parse(raw).text);
     await add((j.itens || []).map(i => ({ tipo: i.tipo === 'entrada' ? 'entrada' : 'gasto', valor: +i.valor, categoria: CAT[i.categoria] ? i.categoria : 'Outros', descricao: (i.descricao || '').slice(0, 80) })).filter(i => i.valor > 0));
     w.textContent = j.resposta || 'Ok.';
-  } catch (e) { w.textContent = 'A IA não respondeu agora (limite gratuito ou conexão). Frases como “gastei 50 no mercado” funcionam sem IA.'; }
+  } catch (e) { w.textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e) + '\n(Frases como “gastei 50 no mercado” funcionam sem IA.)'; }
 }
 function plan() {
   $('#p-n').value = P.nome; $('#p-r').value = P.renda || ''; $('#p-s').value = P.reserva || '';
