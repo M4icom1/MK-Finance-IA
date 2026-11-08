@@ -69,6 +69,6 @@ async function send() {
   } catch (e) { w.textContent = 'A IA não respondeu agora (limite gratuito ou conexão). Frases como “gastei 50 no mercado” funcionam sem IA.'; }
 }
 function show(s) { ses = s; $('#login').hidden = !!s; $('#app').hidden = !s; if (s) { load(); if (!$('#chat').children.length) say('Oi! Me conta seus gastos do jeito que vier, tipo “gastei 150 no mercado”. Também pode perguntar “posso gastar 80 hoje?”.'); } }
-$('#go').onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $('#em').value, password: $('#pw').value }); $('#err').textContent = error ? 'E-mail ou senha incorretos.' : ''; };
+$('#go').onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $('#em').value, password: $('#pw').value }); $('#err').textContent = error ? 'Erro: ' + error.message : ''; };
 $('#out').onclick = () => sb.auth.signOut(); $('#send').onclick = send; $('#inp').onkeydown = e => { if (e.key === 'Enter') send(); };
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((_, s) => show(s));
