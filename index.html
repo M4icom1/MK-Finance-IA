@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e"><title>MK Financeiro</title>
+<style>
+:root{--bg:#0b0c0e;--card:#14161a;--bd:#23262d;--fg:#eef0f3;--mut:#8b919c;--ac:#3ddc97;--bad:#ff6b6b;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.w{max-width:760px;margin:0 auto;padding:12px}
+.cv{width:100%;border-radius:16px;display:block;margin-bottom:12px}
+.g{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:10px}
+.l{font-size:12px;color:var(--mut)}.v{font-size:21px;font-weight:650}.pos{color:var(--ac)}.neg{color:var(--bad)}
+.b{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0}.b i{display:block;height:8px;border-radius:4px;background:var(--ac)}.b span:first-child{width:130px;color:var(--mut)}
+#chat{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto;margin-bottom:8px}
+.m{padding:9px 12px;border-radius:14px;background:#1b1e24;max-width:88%;white-space:pre-wrap}.m.me{align-self:flex-end;background:var(--ac);color:#06130d}
+.r{display:flex;gap:8px}input{flex:1;min-width:0;font:inherit;padding:12px;border-radius:12px;border:1px solid var(--bd);background:#0f1114;color:var(--fg)}
+button{font:inherit;border:0;border-radius:12px;padding:10px 16px;background:var(--ac);color:#06130d;font-weight:600;cursor:pointer}button.s{background:#1b1e24;color:var(--mut);padding:4px 10px;font-weight:400}
+.t{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:14px}
+#login{max-width:360px;margin:12vh auto}#login input{width:100%;margin-bottom:8px}.hd{display:flex;justify-content:space-between;align-items:center;margin:4px 0 10px}
+</style></head><body>
+<div class="w" id="login" hidden><img class="cv" src="cover.svg" alt="MK Financeiro"><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" style="width:100%">Entrar</button><p class="l" id="err"></p></div>
+<div class="w" id="app" hidden>
+<img class="cv" src="cover.svg" alt="MK Financeiro">
+<div class="hd"><b id="mes"></b><button class="s" id="out">Sair</button></div>
+<div class="g">
+<div class="c"><div class="l">Gastos no mês</div><div class="v neg" id="g">–</div></div>
+<div class="c"><div class="l">Entradas no mês</div><div class="v pos" id="e">–</div></div>
+<div class="c"><div class="l">Fatura do cartão (mês)</div><div class="v" id="f">–</div></div>
+<div class="c"><div class="l">Reserva dura (no ritmo atual)</div><div class="v" id="rs">–</div></div></div>
+<div class="c"><div class="l">Por categoria</div><div id="cats"></div></div>
+<div class="c"><div id="chat"></div><div class="r"><input id="inp" placeholder="Ex.: gastei 150 no mercado" autocomplete="off"><button id="send">Enviar</button></div></div>
+<div class="c"><div class="l">Últimos lançamentos</div><div id="list"></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script><script src="app.js"></script>
+</body></html>
