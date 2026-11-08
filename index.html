@@ -25,7 +25,7 @@ button.s{background:var(--c2);color:var(--mut);padding:6px 12px;font-weight:500}
 .bars{display:flex;gap:8px;align-items:flex-end;height:130px;margin-top:10px}.col{flex:1;text-align:center;cursor:pointer}.pr{display:flex;gap:3px;align-items:flex-end;height:100px;justify-content:center}.pr i{width:40%;border-radius:5px 5px 0 0;min-height:2px;transition:height .5s}.col small{font-size:11px;color:var(--mut)}.col.on small{color:var(--ac);font-weight:700}
 .bd{margin:10px 0}.bd .t{display:flex;justify-content:space-between;font-size:14px}.bd .tr{height:8px;background:var(--c2);border-radius:5px;margin-top:5px;overflow:hidden}.bd .tr i{display:block;height:100%;border-radius:5px;transition:width .5s}
 .t{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}.t:last-child{border:0}.t .ic{width:36px;height:36px;border-radius:11px;background:var(--c2);display:grid;place-items:center}.t .tx{flex:1;min-width:0}.t .tx div:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.t small{color:var(--mut)}
-#chat{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;margin:8px 0}.m{padding:9px 12px;border-radius:14px;background:var(--c2);max-width:88%;white-space:pre-wrap}.m.me{align-self:flex-end;background:var(--ac);color:#fff}
+#chat{display:flex;flex-direction:column;gap:8px;max-height:50vh;min-height:28vh;overflow:auto;margin:8px 0}.m{padding:9px 12px;border-radius:14px;background:var(--c2);max-width:88%;white-space:pre-wrap}.m.me{align-self:flex-end;background:var(--ac);color:#fff}
 .chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{background:var(--c2);color:var(--fg);font-weight:400;font-size:13px;padding:6px 11px;border-radius:999px}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:4px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(4,7,17,.92);backdrop-filter:blur(14px);border-top:1px solid var(--bd)}
 .tabs button{flex:1;max-width:190px;background:none;color:var(--mut);font-weight:500;font-size:12px;display:flex;flex-direction:column;gap:2px;align-items:center;padding:6px}.tabs button span{font-size:19px}.tabs button.on{color:var(--ac);background:#0f1f3d}
@@ -35,12 +35,15 @@ textarea{font:inherit;padding:11px;border-radius:12px;border:1px solid var(--bd)
 .hero{display:flex;gap:14px;align-items:center;background:linear-gradient(135deg,#102a5c,var(--card))}.sc{position:relative;width:96px;height:96px;flex:none}.sc svg{transform:rotate(-90deg)}.sc .ct .v{font-size:26px}
 .in h4{margin:12px 0 6px;font-size:12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em}.in ul{margin:0;padding-left:18px}.in li{margin:4px 0}
 .tip{background:var(--c2);border-radius:12px;padding:10px 12px;margin:6px 0}.tip b{display:block}.tip small{color:var(--pos)}button:disabled{opacity:.6}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.g3 .c{padding:10px;margin:0}.g3 .v{font-size:16px}
 </style></head><body>
 <div class="w" id="login" hidden><img class="cv" src="cover.svg" alt="MK Finance IA"><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" class="full">Entrar</button><p class="hint" id="err"></p></div>
 <div id="app" hidden><div class="w">
 <div class="top"><div><b>MK Finance <i>IA</i></b><div class="l" id="hi"></div></div><button class="s" id="out">Sair</button></div>
 <div class="mb" id="mbar"><button class="s" id="mp">◀</button><span id="ml"></span><button class="s" id="mn">▶</button></div>
-<section id="t-home">
+<section id="t-ai">
+<div class="g3"><div class="c"><div class="l">Saldo do mês</div><div class="v" id="a-s">–</div></div><div class="c"><div class="l">Gastos</div><div class="v neg" id="a-g">–</div></div><div class="c"><div class="l">Reserva</div><div class="v pos" id="a-r">–</div></div></div><div class="c"><div class="chips" id="chips"></div><div id="chat"></div><div class="r"><input id="inp" placeholder="Ex.: gastei 150 no mercado" autocomplete="off"><button id="send">Enviar</button></div></div></section>
+<section id="t-home" hidden>
 <div class="c hero"><div class="sc"><svg id="score" viewBox="0 0 42 42"></svg><div class="ct"><div class="v" id="sc-v">–</div><div class="l">saúde</div></div></div><div style="flex:1"><div class="l">Saúde financeira · IA</div><div id="in-r" class="hint">Toque em analisar para receber um diagnóstico das suas finanças e dicas de como melhorar.</div><button id="an" class="full">✨ Analisar com IA</button></div></div>
 <div id="ins"></div>
 <div class="g"><div class="c big"><div class="l">Saldo do mês (entradas − gastos)</div><div class="v" id="v-saldo">–</div></div>
@@ -52,19 +55,20 @@ textarea{font:inherit;padding:11px;border-radius:12px;border:1px solid var(--bd)
 <div class="c"><div class="l">Limites por categoria</div><div id="bud"></div></div></section>
 <section id="t-tx" hidden>
 <div class="c"><div class="l">✨ Lançar vários de uma vez com IA</div><textarea id="ai-l" placeholder="Ex.: mercado 150, uber 23,50, pizza 60 ontem, recebi 300 do freela"></textarea><button id="ai-add" class="full">Classificar e lançar</button></div>
-<div class="c"><div class="seg"><button data-tp="gasto" class="on">Gasto</button><button data-tp="entrada">Entrada</button></div>
+<div class="c"><div class="seg"><button data-tp="gasto" class="on">Gasto</button><button data-tp="entrada">Entrada</button><button data-tp="guardado">Guardei</button><button data-tp="resgate">Retirei</button></div>
 <div class="r2"><input id="f-v" inputmode="decimal" placeholder="Valor (ex.: 25,90)"><input id="f-d" type="date"></div>
 <div class="r2"><select id="f-c"></select><input id="f-t" placeholder="Descrição"></div><button id="f-add" class="full">Adicionar</button></div>
 <div class="c"><div class="r"><input id="q" placeholder="Buscar lançamentos…"><button class="s" id="csv">CSV</button></div><div id="list"></div></div></section>
-<section id="t-ai" hidden><div class="c"><div class="chips" id="chips"></div><div id="chat"></div><div class="r"><input id="inp" placeholder="Ex.: gastei 150 no mercado" autocomplete="off"><button id="send">Enviar</button></div></div></section>
+
 <section id="t-plan" hidden>
 <div class="c"><div class="l">✨ Preencher com IA</div><textarea id="ai-p" placeholder="Ex.: Me chamo Ana, ganho 2.500 por mês, tenho 8 mil guardados. Fatura do cartão: dezembro 400 e janeiro 300. Quero gastar no máximo 600 no mercado."></textarea><button id="ai-fill" class="full">Preencher meu plano</button><div class="hint" style="margin-top:6px">A IA preenche os campos abaixo. Confira e toque em Salvar plano.</div></div>
-<div class="c"><div class="l">Seu perfil</div><div class="r2"><input id="p-n" placeholder="Seu nome"></div><div class="r2"><input id="p-r" inputmode="decimal" placeholder="Renda mensal (R$)"><input id="p-s" inputmode="decimal" placeholder="Reserva atual (R$)"></div></div>
+<div class="c"><div class="l">🔑 Chave da IA (Gemini)</div><div class="r2"><input id="p-k" type="password" autocomplete="off" placeholder="Cole sua chave do Google AI Studio"></div><div class="r2"><input id="p-m" placeholder="Modelo (opcional, ex.: gemini-2.5-flash-lite)"></div><button class="s" id="ai-test" style="margin-top:8px">Testar IA</button><div class="hint" id="ai-res" style="margin-top:6px">Crie a chave em aistudio.google.com/apikey. Ela fica guardada só na sua conta.</div></div>
+<div class="c"><div class="l">Seu perfil</div><div class="r2"><input id="p-n" placeholder="Seu nome"></div><div class="r2"><input id="p-r" inputmode="decimal" placeholder="Renda mensal (R$)"><input id="p-s" inputmode="decimal" placeholder="Reserva inicial (R$)"></div></div>
 <div class="c"><div class="l">Faturas do cartão por mês</div><div id="fat"></div><button class="s" id="fat-add" style="margin-top:8px">+ adicionar mês</button></div>
 <div class="c"><div class="l">Limite mensal por categoria (vazio = sem limite)</div><div id="lim"></div></div>
 <button class="full" id="p-save">Salvar plano</button></section>
 </div>
-<nav class="tabs"><button data-t="home" class="on"><span>📊</span>Início</button><button data-t="tx"><span>🧾</span>Lançamentos</button><button data-t="ai"><span>🤖</span>Assistente</button><button data-t="plan"><span>🎯</span>Plano</button></nav>
+<nav class="tabs"><button data-t="ai" class="on"><span>💬</span>Assistente</button><button data-t="home"><span>📊</span>Painel</button><button data-t="tx"><span>🧾</span>Lançamentos</button><button data-t="plan"><span>🎯</span>Plano</button></nav>
 <div id="toast"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script><script src="app.js"></script>

@@ -9,16 +9,18 @@ const shift = (m, n) => { const [y, k] = m.split('-').map(Number), d = new Date(
 const mlabel = (m, s) => { const [y, k] = m.split('-').map(Number); return new Date(y, k - 1, 1).toLocaleDateString('pt-BR', s ? { month: 'short' } : { month: 'long', year: 'numeric' }); };
 const num = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
 const CAT = { 'Mercado': ['🛒', '#4d8dff'], 'Alimentação': ['🍔', '#ffb454'], 'Transporte': ['🚌', '#38bdf8'], 'Faculdade': ['🎓', '#a78bfa'], 'Lazer': ['🎮', '#f472b6'],
-  'Saúde': ['💊', '#ff6b81'], 'Fatura do cartão': ['💳', '#22d3ee'], 'Empréstimo a amigos': ['🤝', '#fbbf24'], 'Outros': ['📦', '#94a3b8'], 'Entrada': ['💰', '#4dd4ff'] };
-const GC = Object.keys(CAT).filter(k => k !== 'Entrada');
+  'Saúde': ['💊', '#ff6b81'], 'Fatura do cartão': ['💳', '#22d3ee'], 'Empréstimo a amigos': ['🤝', '#fbbf24'], 'Outros': ['📦', '#94a3b8'], 'Entrada': ['💰', '#4dd4ff'], 'Reserva': ['🏦', '#4dd4ff'] };
+const GC = Object.keys(CAT).filter(k => k !== 'Entrada' && k !== 'Reserva');
 const ci = k => CAT[k] || CAT['Outros'];
-let tx = [], P = { nome: '', renda: 0, reserva: 0, faturas: {}, limites: {} }, ses = null, vm = hoje().slice(0, 7), tab = 'home', tipo = 'gasto', sel = null, FR = [], busca = '';
+let tx = [], P = { nome: '', renda: 0, reserva: 0, faturas: {}, limites: {}, gk: '', modelo: '' }, ses = null, vm = hoje().slice(0, 7), tab = 'home', tipo = 'gasto', sel = null, FR = [], busca = '';
 
 const toast = t => { const e = $('#toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2200); };
 const cnt = (el, v) => { const a = +el.dataset.v || 0, t0 = performance.now(); el.dataset.v = v; const f = t => { const k = Math.min(1, (t - t0) / 450); el.textContent = R(a + (v - a) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
 const inM = (x, m) => x.dia.slice(0, 7) === m;
 const sum = (m, t) => tx.filter(x => inM(x, m) && x.tipo === t).reduce((a, x) => a + +x.valor, 0);
 
+const reservaTotal = () => P.reserva + tx.filter(x => x.tipo === 'guardado').reduce((t, x) => t + +x.valor, 0) - tx.filter(x => x.tipo === 'resgate').reduce((t, x) => t + +x.valor, 0);
+const norm = i => { const t = ['entrada', 'guardado', 'resgate'].includes(i.tipo) ? i.tipo : 'gasto'; return { tipo: t, valor: +i.valor, categoria: t === 'entrada' ? 'Entrada' : t === 'gasto' ? (GC.includes(i.categoria) ? i.categoria : 'Outros') : 'Reserva', descricao: String(i.descricao || '').slice(0, 80), ...(/^\d{4}-\d{2}-\d{2}$/.test(i.data) ? { dia: i.data } : {}) }; };
 const K = [['Mercado', /mercado|supermercado|feira|açougue/], ['Alimentação', /lanche|almo[cç]o|jantar|ifood|restaurante|pizza|café|padaria|comida/], ['Transporte', /uber|[oô]nibus|gasolina|passagem|combust/],
   ['Faculdade', /faculdade|livro|xerox|apostila|curso|mensalidade/], ['Lazer', /cinema|jogo|netflix|spotify|festa|rol[eê]/], ['Saúde', /farm[aá]cia|rem[eé]dio|m[eé]dico|dentista/],
   ['Fatura do cartão', /fatura|cart[aã]o|nubank/], ['Empréstimo a amigos', /emprestei|emprestou/]];
@@ -26,12 +28,14 @@ function parse(t) {
   const s = t.toLowerCase(), m = s.match(/\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?/);
   if (!m || /\?|quanto|posso|qual |como /.test(s)) return null;
   if ((s.match(/\d+(?:[.,]\d+)?/g) || []).length > 1) return null;
-  const n = num(m[0]), ent = /receb|ganhei|sal[aá]rio|entrou|me pagou|devolveu/.test(s), gas = /gast|paguei|comprei|compra|almocei|jantei|saiu/.test(s);
-  if (!n || (!ent && !gas)) return null;
-  return { tipo: ent ? 'entrada' : 'gasto', valor: n, categoria: ent ? 'Entrada' : (K.find(k => k[1].test(s)) || ['Outros'])[0], descricao: t.slice(0, 80) };
+  const n = num(m[0]), gd = /guardei|poupei|investi|separei|coloquei na reserva|depositei na reserva/.test(s), rs = /retirei|resgatei|tirei da reserva|saquei da reserva/.test(s),
+    ent = /receb|ganhei|sal[aá]rio|entrou|me pagou|devolveu/.test(s), gas = /gast|paguei|comprei|compra|almocei|jantei|saiu/.test(s);
+  if (!n || (!gd && !rs && !ent && !gas)) return null;
+  const tp = gd ? 'guardado' : rs ? 'resgate' : ent ? 'entrada' : 'gasto';
+  return { tipo: tp, valor: n, categoria: tp === 'entrada' ? 'Entrada' : tp === 'gasto' ? (K.find(k => k[1].test(s)) || ['Outros'])[0] : 'Reserva', descricao: t.slice(0, 80) };
 }
 
-async function loadP() { const { data } = await sb.from('profiles').select('*').maybeSingle(); if (data) P = { nome: data.nome || '', renda: +data.renda || 0, reserva: +data.reserva || 0, faturas: data.faturas || {}, limites: data.limites || {} }; }
+async function loadP() { const { data } = await sb.from('profiles').select('*').maybeSingle(); if (data) P = { nome: data.nome || '', renda: +data.renda || 0, reserva: +data.reserva || 0, faturas: data.faturas || {}, limites: data.limites || {}, gk: data.gemini_key || '', modelo: data.modelo || '' }; }
 async function load() { const { data } = await sb.from('transactions').select('*').order('dia', { ascending: false }).limit(1000); tx = data || []; render(); }
 async function add(items, dia) { if (!items.length) return; const { error } = await sb.from('transactions').insert(items.map(i => ({ ...i, dia: i.dia || dia || hoje() }))); if (error) toast('Erro: ' + error.message); await load(); }
 
@@ -43,10 +47,11 @@ function home() {
   const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), f = P.faturas[vm];
   cnt($('#v-saldo'), e - g); $('#v-saldo').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); cnt($('#v-g'), g); cnt($('#v-e'), e);
   $('#v-f').textContent = f ? R(f) : '–';
+  $('#a-s').textContent = R(e - g); $('#a-s').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); $('#a-g').textContent = R(g); $('#a-r').textContent = R(reservaTotal());
   $('#v-p').textContent = e > 0 ? Math.round((e - g) / e * 100) + '%' : '–';
   const now = hoje(), dd = vm === now.slice(0, 7) ? +now.slice(8) : new Date(+vm.slice(0, 4), +vm.slice(5), 0).getDate(); $('#v-d').textContent = g ? R(g / dd) : '–';
   const all = tx.filter(x => x.tipo === 'gasto'), ms = new Set(all.map(x => x.dia.slice(0, 7))).size, tot = all.reduce((a, x) => a + +x.valor, 0);
-  $('#v-r').textContent = P.reserva && tot ? (P.reserva / (tot / ms)).toFixed(1).replace('.', ',') + ' meses' : '–';
+  $('#v-r').textContent = reservaTotal() > 0 && tot ? (reservaTotal() / (tot / ms)).toFixed(1).replace('.', ',') + ' meses' : '–';
   const by = {}; tx.filter(x => inM(x, vm) && x.tipo === 'gasto').forEach(x => by[x.categoria] = (by[x.categoria] || 0) + +x.valor);
   const arr = Object.entries(by).sort((a, b) => b[1] - a[1]), sv = $('#donut'), lg = $('#leg'); sv.innerHTML = ''; lg.innerHTML = '';
   const mk = (a) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); Object.entries(a).forEach(([k, v]) => c.setAttribute(k, v)); return c; };
@@ -70,29 +75,29 @@ function list() {
   const el = $('#list'); el.innerHTML = '';
   const rows = tx.filter(x => inM(x, vm) && (x.descricao + ' ' + x.categoria).toLowerCase().includes(busca));
   if (!rows.length) el.innerHTML = '<span class="hint">Nenhum lançamento neste mês.</span>';
-  rows.forEach(x => { const r = h('div', 't'), ic = h('div', 'ic', ci(x.categoria)[0]), t = h('div', 'tx'), v = h('b', x.tipo === 'entrada' ? 'pos' : '', (x.tipo === 'entrada' ? '+' : '−') + R(x.valor)), d = h('button', 's', '×');
+  rows.forEach(x => { const r = h('div', 't'), ic = h('div', 'ic', ci(x.categoria)[0]), t = h('div', 'tx'), v = h('b', x.tipo === 'gasto' ? '' : 'pos', ({ gasto: '−', entrada: '+', guardado: '🏦 ', resgate: '↩ ' }[x.tipo] || '') + R(x.valor)), d = h('button', 's', '×');
     t.append(h('div', '', x.descricao || x.categoria), h('small', '', x.dia.slice(8) + '/' + x.dia.slice(5, 7) + ' · ' + x.categoria));
     d.onclick = async () => { await sb.from('transactions').delete().eq('id', x.id); toast('Removido'); load(); }; r.append(ic, t, v, d); el.appendChild(r); });
 }
 function say(t, me) { const d = h('div', 'm' + (me ? ' me' : ''), t); $('#chat').appendChild(d); $('#chat').scrollTop = 1e9; return d; }
 function prompt_(t) {
   const cur = tx.filter(x => inM(x, vm)).slice(0, 40).map(x => x.dia + ' ' + x.tipo + ' ' + x.valor + ' ' + x.categoria + ' ' + (x.descricao || '').slice(0, 40)).join('\n') || '(nenhum)';
-  return 'Você é o assistente financeiro pessoal e privado de ' + (P.nome || 'o usuário') + '. Responda em português do Brasil, curto, calmo, prático e realista, sem alarmismo.\nRenda mensal: R$ ' + P.renda + '. Reserva: R$ ' + P.reserva + '. Faturas do cartão por mês: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) +
-    '.\nHoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nLançamentos do mês:\n' + cur + '\nCategorias: ' + GC.join(', ') + ', Entrada.\nMensagem: ' + t +
-    '\nResponda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada","valor":número,"categoria":"...","descricao":"..."}],"resposta":"texto"}. Se a mensagem registra gasto/entrada, preencha itens. Se for pergunta ou conversa, itens vazio e responda com base nos dados.';
+  return 'Você é o assistente financeiro pessoal e privado de ' + (P.nome || 'o usuário') + '. Responda em português do Brasil, curto, calmo, prático e realista, sem alarmismo.\nRenda mensal: R$ ' + P.renda + '. Reserva: R$ ' + reservaTotal() + '. Faturas do cartão por mês: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) +
+    '.\nHoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nLançamentos do mês:\n' + cur + '\nCategorias: ' + GC.join(', ') + ', Entrada. Tipos: gasto, entrada, guardado (dinheiro colocado na reserva), resgate (retirado da reserva).\nMensagem: ' + t +
+    '\nResponda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada"|"guardado"|"resgate","valor":número,"categoria":"...","descricao":"..."}],"resposta":"texto"}. Se a mensagem registra gasto/entrada, preencha itens. Se for pergunta ou conversa, itens vazio e responda com base nos dados.';
 }
 async function send() {
   const t = $('#inp').value.trim(); if (!t) return; $('#inp').value = ''; say(t, 1);
-  const p = parse(t); if (p) { await add([p]); say('Anotado: ' + R(p.valor) + ' em ' + p.categoria + ' ✓'); return; }
+  const p = parse(t); if (p) { await add([p]); say('✓ ' + { gasto: 'Gasto', entrada: 'Entrada', guardado: 'Guardado na reserva', resgate: 'Resgate da reserva' }[p.tipo] + ' de ' + R(p.valor) + (p.tipo === 'gasto' ? ' em ' + p.categoria : '') + ' anotado.'); return; }
   const w = say('…');
   try {
     const j = await ai(prompt_(t));
-    await add((j.itens || []).map(i => ({ tipo: i.tipo === 'entrada' ? 'entrada' : 'gasto', valor: +i.valor, categoria: CAT[i.categoria] ? i.categoria : 'Outros', descricao: (i.descricao || '').slice(0, 80) })).filter(i => i.valor > 0));
+    await add((j.itens || []).map(norm).filter(i => i.valor > 0));
     w.textContent = j.resposta || 'Ok.';
   } catch (e) { w.textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e) + '\n(Frases como “gastei 50 no mercado” funcionam sem IA.)'; }
 }
 function plan() {
-  $('#p-n').value = P.nome; $('#p-r').value = P.renda || ''; $('#p-s').value = P.reserva || '';
+  $('#p-n').value = P.nome; $('#p-k').value = P.gk; $('#p-m').value = P.modelo; $('#p-r').value = P.renda || ''; $('#p-s').value = P.reserva || '';
   FR = Object.entries(P.faturas).sort(); drawFat();
   const lm = $('#lim'); lm.innerHTML = '';
   GC.forEach(k => { const r = h('div', 'r2'), i = h('input'); i.inputMode = 'decimal'; i.placeholder = 'sem limite'; i.dataset.k = k; i.value = P.limites[k] || ''; r.append(h('div', '', ci(k)[0] + ' ' + k), i); r.style.alignItems = 'center'; lm.appendChild(r); });
@@ -103,36 +108,43 @@ function drawFat() {
     m.onchange = () => x[0] = m.value; v.oninput = () => x[1] = v.value; d.style.flex = '0 0 40px'; d.onclick = () => { FR.splice(n, 1); drawFat(); }; r.append(m, v, d); f.appendChild(r); });
 }
 async function savePlan() {
-  P.nome = $('#p-n').value.trim(); P.renda = num($('#p-r').value); P.reserva = num($('#p-s').value);
+  P.nome = $('#p-n').value.trim(); P.gk = $('#p-k').value.trim(); P.modelo = $('#p-m').value.trim(); P.renda = num($('#p-r').value); P.reserva = num($('#p-s').value);
   P.faturas = {}; FR.forEach(x => { if (x[0] && num(x[1]) > 0) P.faturas[x[0]] = num(x[1]); });
   P.limites = {}; $$('#lim input').forEach(i => { if (num(i.value) > 0) P.limites[i.dataset.k] = num(i.value); });
-  const { error } = await sb.from('profiles').upsert({ user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites }, { onConflict: 'user_id' });
+  const { error } = await sb.from('profiles').upsert({ user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites, gemini_key: P.gk, modelo: P.modelo }, { onConflict: 'user_id' });
   toast(error ? 'Erro: ' + error.message : 'Plano salvo ✓'); render();
 }
 function go(t) {
   tab = t; $$('section').forEach(s => s.hidden = s.id !== 't-' + t); $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
-  $('#mbar').hidden = !(t === 'home' || t === 'tx'); if (t === 'plan') plan(); window.scrollTo(0, 0);
+  $('#mbar').hidden = !(t === 'home' || t === 'tx'); if (t === 'ai') { vm = hoje().slice(0, 7); render(); } if (t === 'plan') plan(); window.scrollTo(0, 0);
 }
 async function show(s) {
   ses = s; $('#login').hidden = !!s; $('#app').hidden = !s;
-  if (!s) { tx = []; P = { nome: '', renda: 0, reserva: 0, faturas: {}, limites: {} }; $('#chat').innerHTML = ''; return; }
-  await loadP(); await load(); go('home');
-  if (!$('#chat').children.length) say('Oi, ' + (P.nome || 'tudo bem') + '! Me conta seus gastos do jeito que vier, tipo “gastei 150 no mercado”. Dica: na aba Plano você pode me contar tudo num texto só e eu preencho para você.');
+  if (!s) { tx = []; P = { nome: '', renda: 0, reserva: 0, faturas: {}, limites: {}, gk: '', modelo: '' }; $('#chat').innerHTML = ''; return; }
+  await loadP(); await load(); go('ai');
+  if (!$('#chat').children.length) say('Oi, ' + (P.nome || 'tudo bem') + '! Eu anoto tudo para você. Pode escrever: “gastei 50 no mercado”, “guardei 200”, “recebi 1.100 de salário” ou “retirei 80 da reserva”. Também respondo dúvidas sobre o seu dinheiro. Dica: na aba Plano você pode me contar tudo num texto só e eu preencho.');
 }
 $('#go').onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $('#em').value, password: $('#pw').value }); $('#err').textContent = error ? 'Erro: ' + error.message : ''; };
 $('#out').onclick = () => sb.auth.signOut(); $('#send').onclick = send; $('#inp').onkeydown = e => { if (e.key === 'Enter') send(); };
 $('#mp').onclick = () => { vm = shift(vm, -1); render(); }; $('#mn').onclick = () => { vm = shift(vm, 1); render(); };
 $$('.tabs button').forEach(b => b.onclick = () => go(b.dataset.t));
-$$('.seg button').forEach(b => b.onclick = () => { tipo = b.dataset.tp; $$('.seg button').forEach(x => x.classList.toggle('on', x === b)); $('#f-c').hidden = tipo === 'entrada'; });
+$$('.seg button').forEach(b => b.onclick = () => { tipo = b.dataset.tp; $$('.seg button').forEach(x => x.classList.toggle('on', x === b)); $('#f-c').hidden = tipo !== 'gasto'; });
 $('#f-c').innerHTML = GC.map(k => '<option>' + k + '</option>').join(''); $('#f-d').value = hoje();
 $('#f-add').onclick = async () => { const v = num($('#f-v').value); if (v <= 0) return toast('Informe um valor');
-  await add([{ tipo, valor: v, categoria: tipo === 'entrada' ? 'Entrada' : $('#f-c').value, descricao: $('#f-t').value.trim().slice(0, 80) }], $('#f-d').value || hoje()); $('#f-v').value = ''; $('#f-t').value = ''; toast('Lançado ✓'); };
+  await add([{ tipo, valor: v, categoria: tipo === 'entrada' ? 'Entrada' : tipo === 'gasto' ? $('#f-c').value : 'Reserva', descricao: $('#f-t').value.trim().slice(0, 80) }], $('#f-d').value || hoje()); $('#f-v').value = ''; $('#f-t').value = ''; toast('Lançado ✓'); };
 $('#q').oninput = e => { busca = e.target.value.toLowerCase(); list(); };
 $('#csv').onclick = () => { const rows = [['data', 'tipo', 'valor', 'categoria', 'descricao'], ...tx.map(x => [x.dia, x.tipo, x.valor, x.categoria, '"' + (x.descricao || '').replace(/"/g, '""') + '"'])];
   const a = h('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'mk-finance-ia.csv'; a.click(); };
 $('#fat-add').onclick = () => { FR.push([vm, '']); drawFat(); }; $('#p-save').onclick = savePlan;
 ['Quanto gastei hoje?', 'Resumo do mês', 'Posso gastar 80 hoje?', 'Onde posso economizar?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); go('ai'); }; $('#chips').appendChild(b); });
 async function ai(p) {
+  if (P.gk) {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(P.modelo || 'gemini-2.5-flash-lite') + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': P.gk },
+      body: JSON.stringify({ contents: [{ parts: [{ text: p }] }], generationConfig: { responseMimeType: 'application/json' } }) });
+    const raw = await r.text(); if (!r.ok) throw new Error('Gemini ' + r.status + ' ' + raw.slice(0, 160));
+    return JSON.parse(JSON.parse(raw).candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim());
+  }
+  if (!C.WORKER_URL || /COLE_AQUI/.test(C.WORKER_URL)) throw new Error('Cole sua chave do Gemini na aba Plano.');
   const r = await fetch(C.WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.access_token }, body: JSON.stringify({ prompt: p }) });
   const raw = await r.text(); if (!r.ok) throw new Error(r.status + ' ' + raw.slice(0, 200));
   return JSON.parse(JSON.parse(raw).text);
@@ -158,7 +170,7 @@ function drawIns() {
 async function analisar() {
   const b = $('#an'); b.disabled = true; b.textContent = 'Analisando…';
   const hm = hoje().slice(0, 7), dados = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos: Math.round(sum(m, 'gasto')), entradas: Math.round(sum(m, 'entrada')), categorias: catsOf(m) }; });
-  const p = 'Você é um consultor financeiro pessoal didático e honesto de ' + (P.nome || 'o usuário') + '. Analise estes dados (português do Brasil, tom calmo e realista).\nRenda mensal informada: R$ ' + P.renda + '. Reserva guardada: R$ ' + P.reserva + '. Faturas do cartão: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) +
+  const p = 'Você é um consultor financeiro pessoal didático e honesto de ' + (P.nome || 'o usuário') + '. Analise estes dados (português do Brasil, tom calmo e realista).\nRenda mensal informada: R$ ' + P.renda + '. Reserva guardada: R$ ' + reservaTotal() + '. Faturas do cartão: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) +
     '.\nÚltimos 6 meses: ' + JSON.stringify(dados) + '\nMês atual: ' + hm + '.\nResponda SÓ JSON: {"nota":0 a 100,"resumo":"2 frases","pontos_fortes":["..."],"alertas":["..."],"dicas":[{"titulo":"...","texto":"...","economia_mensal_estimada":número}],"meta":"uma meta realista"}. Use só os dados fornecidos e não invente valores. Se houver poucos dados, diga isso e dê uma nota cautelosa. Sem recomendar investimentos específicos. Máximo 3 itens em cada lista.';
   try { INS = await ai(p); drawIns(); } catch (e) { $('#in-r').textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e); }
   b.disabled = false; b.textContent = '✨ Analisar novamente';
@@ -176,13 +188,15 @@ async function fillAI() {
 }
 async function lancarIA() {
   const t = $('#ai-l').value.trim(); if (!t) return toast('Cole seus gastos primeiro'); const b = $('#ai-add'); b.disabled = true; b.textContent = 'Classificando…';
-  const p = 'Transforme o texto em lançamentos financeiros. Hoje é ' + hoje() + '. Categorias: ' + GC.join(', ') + ', Entrada. Responda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada","valor":número,"categoria":"...","descricao":"curta","data":"AAAA-MM-DD"}]}. Se não houver data, use hoje; "ontem" é o dia anterior. Não invente itens.\nTexto: ' + t.slice(0, 2000);
+  const p = 'Transforme o texto em lançamentos financeiros. Hoje é ' + hoje() + '. Categorias: ' + GC.join(', ') + ', Entrada. Responda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada"|"guardado"|"resgate","valor":número,"categoria":"...","descricao":"curta","data":"AAAA-MM-DD"}]}. Se não houver data, use hoje; "ontem" é o dia anterior. Não invente itens.\nTexto: ' + t.slice(0, 2000);
   try {
-    const j = await ai(p), its = (j.itens || []).map(i => ({ tipo: i.tipo === 'entrada' ? 'entrada' : 'gasto', valor: +i.valor, categoria: CAT[i.categoria] ? i.categoria : 'Outros', descricao: String(i.descricao || '').slice(0, 80), dia: /^\d{4}-\d{2}-\d{2}$/.test(i.data) ? i.data : hoje() })).filter(i => i.valor > 0);
+    const j = await ai(p), its = (j.itens || []).map(norm).filter(i => i.valor > 0);
     await add(its); $('#ai-l').value = ''; toast(its.length + ' lançamento(s) adicionados ✓');
   } catch (e) { toast('IA indisponível: ' + String(e.message || e).slice(0, 80)); }
   b.disabled = false; b.textContent = 'Classificar e lançar';
 }
 ring(0); $('#an').onclick = analisar; $('#ai-fill').onclick = fillAI; $('#ai-add').onclick = lancarIA;
+[['💸 Gastei…', 'gastei '], ['🏦 Guardei…', 'guardei '], ['💰 Recebi…', 'recebi ']].forEach(([l, v]) => { const b = h('button', '', l); b.onclick = () => { $('#inp').value = v; $('#inp').focus(); }; $('#chips').prepend(b); });
+$('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = $('#p-m').value.trim(); $('#ai-res').textContent = 'Testando…'; try { const j = await ai('Responda SÓ JSON: {"ok":true}'); $('#ai-res').textContent = j.ok ? 'IA funcionando ✓ (toque em Salvar plano para guardar a chave)' : 'Resposta inesperada da IA.'; } catch (e) { $('#ai-res').textContent = 'Erro: ' + (e.message || e); } };
 { const b = h('button', '', '📈 Analisar minhas finanças'); b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });
