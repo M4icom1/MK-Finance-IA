@@ -23,7 +23,7 @@ export default {
         generationConfig: { responseMimeType: 'application/json' }
       })
     });
-    if (!g.ok) return new Response('ia indisponivel', { status: 502, headers: cors });
+    if (!g.ok) { const t = await g.text(); return new Response('ia indisponivel ' + g.status + ': ' + t.slice(0, 200), { status: 502, headers: cors }); }
     const d = await g.json();
     const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     return new Response(JSON.stringify({ text }), { headers: { ...cors, 'Content-Type': 'application/json' } });
