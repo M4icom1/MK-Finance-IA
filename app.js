@@ -8,8 +8,8 @@ const hoje = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.
 const shift = (m, n) => { const [y, k] = m.split('-').map(Number), d = new Date(y, k - 1 + n, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
 const mlabel = (m, s) => { const [y, k] = m.split('-').map(Number); return new Date(y, k - 1, 1).toLocaleDateString('pt-BR', s ? { month: 'short' } : { month: 'long', year: 'numeric' }); };
 const num = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
-const CAT = { 'Mercado': ['🛒', '#3ddc97'], 'Alimentação': ['🍔', '#ffb454'], 'Transporte': ['🚌', '#5aa9ff'], 'Faculdade': ['🎓', '#b48cff'], 'Lazer': ['🎮', '#ff6fae'],
-  'Saúde': ['💊', '#ff6b6b'], 'Fatura do cartão': ['💳', '#4dd0e1'], 'Empréstimo a amigos': ['🤝', '#c0ca33'], 'Outros': ['📦', '#9aa0a6'], 'Entrada': ['💰', '#3ddc97'] };
+const CAT = { 'Mercado': ['🛒', '#4d8dff'], 'Alimentação': ['🍔', '#ffb454'], 'Transporte': ['🚌', '#38bdf8'], 'Faculdade': ['🎓', '#a78bfa'], 'Lazer': ['🎮', '#f472b6'],
+  'Saúde': ['💊', '#ff6b81'], 'Fatura do cartão': ['💳', '#22d3ee'], 'Empréstimo a amigos': ['🤝', '#fbbf24'], 'Outros': ['📦', '#94a3b8'], 'Entrada': ['💰', '#4dd4ff'] };
 const GC = Object.keys(CAT).filter(k => k !== 'Entrada');
 const ci = k => CAT[k] || CAT['Outros'];
 let tx = [], P = { nome: '', renda: 0, reserva: 0, faturas: {}, limites: {} }, ses = null, vm = hoje().slice(0, 7), tab = 'home', tipo = 'gasto', sel = null, FR = [], busca = '';
@@ -25,6 +25,7 @@ const K = [['Mercado', /mercado|supermercado|feira|açougue/], ['Alimentação',
 function parse(t) {
   const s = t.toLowerCase(), m = s.match(/\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?/);
   if (!m || /\?|quanto|posso|qual |como /.test(s)) return null;
+  if ((s.match(/\d+(?:[.,]\d+)?/g) || []).length > 1) return null;
   const n = num(m[0]), ent = /receb|ganhei|sal[aá]rio|entrou|me pagou|devolveu/.test(s), gas = /gast|paguei|comprei|compra|almocei|jantei|saiu/.test(s);
   if (!n || (!ent && !gas)) return null;
   return { tipo: ent ? 'entrada' : 'gasto', valor: n, categoria: ent ? 'Entrada' : (K.find(k => k[1].test(s)) || ['Outros'])[0], descricao: t.slice(0, 80) };
@@ -32,7 +33,7 @@ function parse(t) {
 
 async function loadP() { const { data } = await sb.from('profiles').select('*').maybeSingle(); if (data) P = { nome: data.nome || '', renda: +data.renda || 0, reserva: +data.reserva || 0, faturas: data.faturas || {}, limites: data.limites || {} }; }
 async function load() { const { data } = await sb.from('transactions').select('*').order('dia', { ascending: false }).limit(1000); tx = data || []; render(); }
-async function add(items, dia) { if (!items.length) return; const { error } = await sb.from('transactions').insert(items.map(i => ({ ...i, dia: dia || hoje() }))); if (error) toast('Erro: ' + error.message); await load(); }
+async function add(items, dia) { if (!items.length) return; const { error } = await sb.from('transactions').insert(items.map(i => ({ ...i, dia: i.dia || dia || hoje() }))); if (error) toast('Erro: ' + error.message); await load(); }
 
 function render() {
   $('#hi').textContent = 'Olá, ' + (P.nome || (ses ? ses.user.email.split('@')[0] : '')) + '!';
@@ -42,12 +43,14 @@ function home() {
   const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), f = P.faturas[vm];
   cnt($('#v-saldo'), e - g); $('#v-saldo').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); cnt($('#v-g'), g); cnt($('#v-e'), e);
   $('#v-f').textContent = f ? R(f) : '–';
+  $('#v-p').textContent = e > 0 ? Math.round((e - g) / e * 100) + '%' : '–';
+  const now = hoje(), dd = vm === now.slice(0, 7) ? +now.slice(8) : new Date(+vm.slice(0, 4), +vm.slice(5), 0).getDate(); $('#v-d').textContent = g ? R(g / dd) : '–';
   const all = tx.filter(x => x.tipo === 'gasto'), ms = new Set(all.map(x => x.dia.slice(0, 7))).size, tot = all.reduce((a, x) => a + +x.valor, 0);
   $('#v-r').textContent = P.reserva && tot ? (P.reserva / (tot / ms)).toFixed(1).replace('.', ',') + ' meses' : '–';
   const by = {}; tx.filter(x => inM(x, vm) && x.tipo === 'gasto').forEach(x => by[x.categoria] = (by[x.categoria] || 0) + +x.valor);
   const arr = Object.entries(by).sort((a, b) => b[1] - a[1]), sv = $('#donut'), lg = $('#leg'); sv.innerHTML = ''; lg.innerHTML = '';
   const mk = (a) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); Object.entries(a).forEach(([k, v]) => c.setAttribute(k, v)); return c; };
-  sv.appendChild(mk({ cx: 21, cy: 21, r: 15.915, fill: 'none', stroke: '#1c1f27', 'stroke-width': 5 }));
+  sv.appendChild(mk({ cx: 21, cy: 21, r: 15.915, fill: 'none', stroke: '#121b30', 'stroke-width': 5 }));
   let off = 25;
   arr.forEach(([k, v]) => { const p = v / g * 100, c = mk({ cx: 21, cy: 21, r: 15.915, fill: 'none', stroke: ci(k)[1], 'stroke-width': sel === k ? 6.5 : 5, 'stroke-dasharray': p + ' ' + (100 - p), 'stroke-dashoffset': off });
     c.style.cursor = 'pointer'; c.onclick = () => { sel = sel === k ? null : k; home(); }; sv.appendChild(c); off -= p;
@@ -56,7 +59,7 @@ function home() {
   else if (sel && by[sel]) { $('#dc-l').textContent = sel; $('#dc-v').textContent = R(by[sel]) + ' · ' + Math.round(by[sel] / g * 100) + '%'; }
   else { $('#dc-l').textContent = 'Total'; $('#dc-v').textContent = R(g); }
   const ms6 = [-5, -4, -3, -2, -1, 0].map(i => shift(vm, i)), mx = Math.max(1, ...ms6.map(m => Math.max(sum(m, 'gasto'), sum(m, 'entrada')))), bs = $('#bars'); bs.innerHTML = '';
-  ms6.forEach(m => { const c = h('div', 'col' + (m === vm ? ' on' : '')), p = h('div', 'pr'), a = h('i'), b = h('i'); a.style.background = '#ff6b6b'; b.style.background = '#3ddc97';
+  ms6.forEach(m => { const c = h('div', 'col' + (m === vm ? ' on' : '')), p = h('div', 'pr'), a = h('i'), b = h('i'); a.style.background = '#ff6b81'; b.style.background = '#4dd4ff';
     a.style.height = sum(m, 'gasto') / mx * 100 + '%'; b.style.height = sum(m, 'entrada') / mx * 100 + '%'; p.append(a, b); c.append(p, h('small', '', mlabel(m, 1))); c.onclick = () => { vm = m; render(); }; bs.appendChild(c); });
   const bd = $('#bud'); bd.innerHTML = ''; const ks = Object.keys(P.limites).filter(k => +P.limites[k] > 0);
   if (!ks.length) bd.innerHTML = '<span class="hint">Defina limites na aba Plano para acompanhar aqui.</span>';
@@ -73,7 +76,7 @@ function list() {
 }
 function say(t, me) { const d = h('div', 'm' + (me ? ' me' : ''), t); $('#chat').appendChild(d); $('#chat').scrollTop = 1e9; return d; }
 function prompt_(t) {
-  const cur = tx.filter(x => inM(x, vm)).map(x => x.dia + ' ' + x.tipo + ' ' + x.valor + ' ' + x.categoria + ' ' + x.descricao).join('\n') || '(nenhum)';
+  const cur = tx.filter(x => inM(x, vm)).slice(0, 40).map(x => x.dia + ' ' + x.tipo + ' ' + x.valor + ' ' + x.categoria + ' ' + (x.descricao || '').slice(0, 40)).join('\n') || '(nenhum)';
   return 'Você é o assistente financeiro pessoal e privado de ' + (P.nome || 'o usuário') + '. Responda em português do Brasil, curto, calmo, prático e realista, sem alarmismo.\nRenda mensal: R$ ' + P.renda + '. Reserva: R$ ' + P.reserva + '. Faturas do cartão por mês: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) +
     '.\nHoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nLançamentos do mês:\n' + cur + '\nCategorias: ' + GC.join(', ') + ', Entrada.\nMensagem: ' + t +
     '\nResponda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada","valor":número,"categoria":"...","descricao":"..."}],"resposta":"texto"}. Se a mensagem registra gasto/entrada, preencha itens. Se for pergunta ou conversa, itens vazio e responda com base nos dados.';
@@ -83,8 +86,7 @@ async function send() {
   const p = parse(t); if (p) { await add([p]); say('Anotado: ' + R(p.valor) + ' em ' + p.categoria + ' ✓'); return; }
   const w = say('…');
   try {
-    const r = await fetch(C.WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.access_token }, body: JSON.stringify({ prompt: prompt_(t) }) });
-    const raw = await r.text(); if (!r.ok) throw new Error(r.status + ' ' + raw.slice(0, 200)); const j = JSON.parse(JSON.parse(raw).text);
+    const j = await ai(prompt_(t));
     await add((j.itens || []).map(i => ({ tipo: i.tipo === 'entrada' ? 'entrada' : 'gasto', valor: +i.valor, categoria: CAT[i.categoria] ? i.categoria : 'Outros', descricao: (i.descricao || '').slice(0, 80) })).filter(i => i.valor > 0));
     w.textContent = j.resposta || 'Ok.';
   } catch (e) { w.textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e) + '\n(Frases como “gastei 50 no mercado” funcionam sem IA.)'; }
@@ -115,7 +117,7 @@ async function show(s) {
   ses = s; $('#login').hidden = !!s; $('#app').hidden = !s;
   if (!s) { tx = []; P = { nome: '', renda: 0, reserva: 0, faturas: {}, limites: {} }; $('#chat').innerHTML = ''; return; }
   await loadP(); await load(); go('home');
-  if (!$('#chat').children.length) say('Oi, ' + (P.nome || 'tudo bem') + '! Me conta seus gastos do jeito que vier, tipo “gastei 150 no mercado”. Antes de tudo, preencha seu perfil na aba Plano.');
+  if (!$('#chat').children.length) say('Oi, ' + (P.nome || 'tudo bem') + '! Me conta seus gastos do jeito que vier, tipo “gastei 150 no mercado”. Dica: na aba Plano você pode me contar tudo num texto só e eu preencho para você.');
 }
 $('#go').onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $('#em').value, password: $('#pw').value }); $('#err').textContent = error ? 'Erro: ' + error.message : ''; };
 $('#out').onclick = () => sb.auth.signOut(); $('#send').onclick = send; $('#inp').onkeydown = e => { if (e.key === 'Enter') send(); };
@@ -130,4 +132,57 @@ $('#csv').onclick = () => { const rows = [['data', 'tipo', 'valor', 'categoria',
   const a = h('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'mk-finance-ia.csv'; a.click(); };
 $('#fat-add').onclick = () => { FR.push([vm, '']); drawFat(); }; $('#p-save').onclick = savePlan;
 ['Quanto gastei hoje?', 'Resumo do mês', 'Posso gastar 80 hoje?', 'Onde posso economizar?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); go('ai'); }; $('#chips').appendChild(b); });
+async function ai(p) {
+  const r = await fetch(C.WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.access_token }, body: JSON.stringify({ prompt: p }) });
+  const raw = await r.text(); if (!r.ok) throw new Error(r.status + ' ' + raw.slice(0, 200));
+  return JSON.parse(JSON.parse(raw).text);
+}
+const catsOf = m => { const o = {}; tx.filter(x => inM(x, m) && x.tipo === 'gasto').forEach(x => o[x.categoria] = Math.round((o[x.categoria] || 0) + +x.valor)); return o; };
+let INS = null;
+function ring(n, c) {
+  const s = $('#score'); s.innerHTML = '';
+  [['#121b30', 100], [c || '#4d8dff', n]].forEach(([st, p]) => { const e = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    [['cx', 21], ['cy', 21], ['r', 15.915], ['fill', 'none'], ['stroke', st], ['stroke-width', 4], ['stroke-dasharray', p + ' ' + (100 - p)], ['stroke-linecap', 'round']].forEach(([k, v]) => e.setAttribute(k, v)); s.appendChild(e); });
+}
+function drawIns() {
+  const j = INS, box = $('#ins'); box.innerHTML = ''; if (!j) return;
+  const n = Math.max(0, Math.min(100, Math.round(+j.nota || 0))), col = n >= 70 ? '#4dd4ff' : n >= 45 ? '#ffb454' : '#ff6b81';
+  ring(n, col); $('#sc-v').textContent = n; $('#in-r').textContent = j.resumo || '';
+  const c = h('div', 'c in'), sec = (t, a) => { if (!a || !a.length) return; c.appendChild(h('h4', '', t)); const u = h('ul'); a.forEach(x => u.appendChild(h('li', '', String(x)))); c.appendChild(u); };
+  sec('Pontos fortes', j.pontos_fortes); sec('Atenção', j.alertas);
+  if ((j.dicas || []).length) { c.appendChild(h('h4', '', 'Como melhorar')); j.dicas.slice(0, 5).forEach(d => { const t = h('div', 'tip'); t.appendChild(h('b', '', String(d.titulo || ''))); t.appendChild(h('div', '', String(d.texto || '')));
+    if (+d.economia_mensal_estimada > 0) t.appendChild(h('small', '', 'Economia estimada: ' + R(d.economia_mensal_estimada) + '/mês')); c.appendChild(t); }); }
+  if (j.meta) { c.appendChild(h('h4', '', 'Meta para o próximo mês')); c.appendChild(h('div', '', String(j.meta))); }
+  c.appendChild(h('div', 'hint', 'Orientação educativa gerada por IA, não é consultoria financeira.')); box.appendChild(c);
+}
+async function analisar() {
+  const b = $('#an'); b.disabled = true; b.textContent = 'Analisando…';
+  const hm = hoje().slice(0, 7), dados = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos: Math.round(sum(m, 'gasto')), entradas: Math.round(sum(m, 'entrada')), categorias: catsOf(m) }; });
+  const p = 'Você é um consultor financeiro pessoal didático e honesto de ' + (P.nome || 'o usuário') + '. Analise estes dados (português do Brasil, tom calmo e realista).\nRenda mensal informada: R$ ' + P.renda + '. Reserva guardada: R$ ' + P.reserva + '. Faturas do cartão: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) +
+    '.\nÚltimos 6 meses: ' + JSON.stringify(dados) + '\nMês atual: ' + hm + '.\nResponda SÓ JSON: {"nota":0 a 100,"resumo":"2 frases","pontos_fortes":["..."],"alertas":["..."],"dicas":[{"titulo":"...","texto":"...","economia_mensal_estimada":número}],"meta":"uma meta realista"}. Use só os dados fornecidos e não invente valores. Se houver poucos dados, diga isso e dê uma nota cautelosa. Sem recomendar investimentos específicos. Máximo 3 itens em cada lista.';
+  try { INS = await ai(p); drawIns(); } catch (e) { $('#in-r').textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e); }
+  b.disabled = false; b.textContent = '✨ Analisar novamente';
+}
+async function fillAI() {
+  const t = $('#ai-p').value.trim(); if (!t) return toast('Escreva algo primeiro'); const b = $('#ai-fill'); b.disabled = true; b.textContent = 'Lendo…';
+  const p = 'Extraia dados financeiros pessoais do texto. Hoje é ' + hoje() + '. Responda SÓ JSON: {"nome":"","renda":número ou null,"reserva":número ou null,"faturas":{"AAAA-MM":número},"limites":{"Categoria":número}}. Categorias válidas para limites: ' + GC.join(', ') + '. Omita ou use null o que não foi dito; não invente. Meses sem ano são o mais próximo no futuro.\nTexto: ' + t.slice(0, 1500);
+  try {
+    const j = await ai(p); if (j.nome) $('#p-n').value = j.nome; if (j.renda > 0) $('#p-r').value = j.renda; if (j.reserva > 0) $('#p-s').value = j.reserva;
+    Object.entries(j.faturas || {}).forEach(([m, v]) => { if (/^\d{4}-\d{2}$/.test(m) && +v > 0) { const f = FR.find(x => x[0] === m); if (f) f[1] = v; else FR.push([m, v]); } }); drawFat();
+    Object.entries(j.limites || {}).forEach(([k, v]) => { const i = $$('#lim input').find(x => x.dataset.k === k); if (i && +v > 0) i.value = v; });
+    toast('Preenchido! Confira e toque em Salvar plano');
+  } catch (e) { toast('IA indisponível: ' + String(e.message || e).slice(0, 80)); }
+  b.disabled = false; b.textContent = 'Preencher meu plano';
+}
+async function lancarIA() {
+  const t = $('#ai-l').value.trim(); if (!t) return toast('Cole seus gastos primeiro'); const b = $('#ai-add'); b.disabled = true; b.textContent = 'Classificando…';
+  const p = 'Transforme o texto em lançamentos financeiros. Hoje é ' + hoje() + '. Categorias: ' + GC.join(', ') + ', Entrada. Responda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada","valor":número,"categoria":"...","descricao":"curta","data":"AAAA-MM-DD"}]}. Se não houver data, use hoje; "ontem" é o dia anterior. Não invente itens.\nTexto: ' + t.slice(0, 2000);
+  try {
+    const j = await ai(p), its = (j.itens || []).map(i => ({ tipo: i.tipo === 'entrada' ? 'entrada' : 'gasto', valor: +i.valor, categoria: CAT[i.categoria] ? i.categoria : 'Outros', descricao: String(i.descricao || '').slice(0, 80), dia: /^\d{4}-\d{2}-\d{2}$/.test(i.data) ? i.data : hoje() })).filter(i => i.valor > 0);
+    await add(its); $('#ai-l').value = ''; toast(its.length + ' lançamento(s) adicionados ✓');
+  } catch (e) { toast('IA indisponível: ' + String(e.message || e).slice(0, 80)); }
+  b.disabled = false; b.textContent = 'Classificar e lançar';
+}
+ring(0); $('#an').onclick = analisar; $('#ai-fill').onclick = fillAI; $('#ai-add').onclick = lancarIA;
+{ const b = h('button', '', '📈 Analisar minhas finanças'); b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });
