@@ -1,7 +1,7 @@
 // Preencha estes 3 campos (passo a passo no README). Pode ficar público: não são segredos.
 window.CFG = {
   SUPABASE_URL: "https://objfzzorfuebevyxdtvc.supabase.co",
-  SUPABASE_KEY: "sb_publishable_ubKvq2qg359kBNTY30hGYw_b1CxIxlB",
+  SUPABASE_KEY: "sb_publishable_EZhrlpL8ExpEuLRWBT4Ong_PzVh7BNg",
   WORKER_URL: "https://mkfinance-ia.m4icom1.workers.dev",
   RENDA: 1100,
   RESERVA: 18732,
