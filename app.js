@@ -75,7 +75,10 @@ function tips() {
 }
 
 /* ---------- dados ---------- */
-async function loadP() { const { data } = await sb.from('profiles').select('*').maybeSingle(); if (data) P = { nome: data.nome || '', renda: +data.renda || 0, reserva: +data.reserva || 0, faturas: data.faturas || {}, limites: data.limites || {}, gk: data.gemini_key || '', modelo: data.modelo || '', ex: data.extra || {} }; }
+async function loadP() { const { data } = await sb.from('profiles').select('*').maybeSingle(); if (data) P = { nome: data.nome || '', renda: +data.renda || 0, reserva: +data.reserva || 0, faturas: data.faturas || {}, limites: data.limites || {}, gk: data.gemini_key || '', modelo: data.modelo || '', ex: data.extra || {} };
+  try { const l = JSON.parse(localStorage.getItem('mk_ai_' + ses.user.id) || '{}'); if (!P.gk && l.gk) { P.gk = l.gk; P.modelo = l.modelo || P.modelo; } } catch (e) { }
+}
+const saveAI = () => { try { localStorage.setItem('mk_ai_' + ses.user.id, JSON.stringify({ gk: P.gk, modelo: P.modelo })); } catch (e) { } };
 async function load() { const { data } = await sb.from('transactions').select('*').order('dia', { ascending: false }).limit(1000); tx = data || []; render(); }
 async function add(items, dia) { if (!items.length) return; const { error } = await sb.from('transactions').insert(items.map(i => ({ ...i, dia: i.dia || dia || hoje() }))); if (error) toast('Erro: ' + error.message); await load(); }
 
@@ -231,10 +234,10 @@ async function savePlan() {
   P.nome = $('#p-n').value.trim(); P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); P.renda = num($('#p-r').value); P.reserva = num($('#p-s').value);
   P.ex = { ocup: $('#x-o').value.trim(), hTrab: num($('#x-h').value), dSem: num($('#x-d').value), turno: $('#x-t').value, hEst: num($('#x-e').value), eTurno: $('#x-et').value };
   P.faturas = {}; FR.forEach(x => { if (x[0] && num(x[1]) > 0) P.faturas[x[0]] = num(x[1]); }); P.limites = {}; $$('#lim input').forEach(i => { if (num(i.value) > 0) P.limites[i.dataset.k] = num(i.value); });
-  const row = { user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites, gemini_key: P.gk, modelo: P.modelo };
-  let { error } = await sb.from('profiles').upsert({ ...row, extra: P.ex }, { onConflict: 'user_id' });
-  if (error && /extra/.test(error.message)) { ({ error } = await sb.from('profiles').upsert(row, { onConflict: 'user_id' })); toast(error ? 'Erro: ' + error.message : 'Salvo, mas rode o SQL da atualização 3 para guardar a rotina.'); }
-  else toast(error ? 'Erro: ' + error.message : 'Plano salvo ✓'); render();
+  saveAI(); const base = { user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites };
+  const tries = [{ ...base, gemini_key: P.gk, modelo: P.modelo, extra: P.ex }, { ...base, gemini_key: P.gk, modelo: P.modelo }, base]; let error, k = 0;
+  for (; k < tries.length; k++) { ({ error } = await sb.from('profiles').upsert(tries[k], { onConflict: 'user_id' })); if (!error) break; }
+  toast(error ? 'Erro: ' + error.message : k === 0 ? 'Plano salvo ✓' : 'Salvo, mas faltam colunas no banco: rode os SQL das atualizações 2 e 3. A chave da IA ficou salva neste aparelho.'); render();
 }
 
 /* ---------- navegação e eventos ---------- */
@@ -265,7 +268,7 @@ $('#csv').onclick = () => { const rows = [['data', 'tipo', 'valor', 'categoria',
   const a = h('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'mk-finance-ia.csv'; a.click(); };
 $('#fat-add').onclick = () => { FR.push([vm, '']); drawFat(); }; $('#p-save').onclick = savePlan; ['#p-r', '#x-h', '#x-d'].forEach(i => $(i).oninput = vh_);
 $('#an').onclick = analisar; $('#ai-fill').onclick = fillAI; $('#ai-add').onclick = lancarIA; ring(0); $('#p-pv').onchange = pvHint;
-$('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); $('#ai-res').textContent = 'Testando…'; try { const j = await ai('Responda SÓ JSON: {"ok":true}'); $('#ai-res').textContent = j.ok ? 'IA funcionando ✓ com ' + PROV[pm().prov].n + ' (toque em Salvar plano para guardar)' : 'Resposta inesperada da IA.'; } catch (e) { $('#ai-res').textContent = 'Erro: ' + (e.message || e); } };
+$('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); saveAI(); $('#ai-res').textContent = 'Testando…'; try { const j = await ai('Responda SÓ JSON: {"ok":true}'); $('#ai-res').textContent = j.ok ? 'IA funcionando ✓ com ' + PROV[pm().prov].n + ' (toque em Salvar plano para guardar)' : 'Resposta inesperada da IA.'; } catch (e) { $('#ai-res').textContent = 'Erro: ' + (e.message || e); } };
 [['💸 Gastei…', 'gastei '], ['🏦 Guardei…', 'guardei '], ['💰 Recebi…', 'recebi ']].forEach(([l, v]) => { const b = h('button', '', l); b.onclick = () => { $('#inp').value = v; $('#inp').focus(); }; $('#chips').appendChild(b); });
 ['Quanto gastei hoje?', 'Resumo do mês', 'Posso gastar 80 hoje?', 'Onde posso economizar?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button', '', '📈 Analisar minhas finanças'); b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
