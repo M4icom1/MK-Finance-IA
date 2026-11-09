@@ -145,14 +145,24 @@ function list() {
 }
 
 /* ---------- IA ---------- */
+const PROV = { gemini: { n: 'Gemini (Google)', m: 'gemini-2.5-flash-lite' }, groq: { n: 'Groq', m: 'openai/gpt-oss-120b', u: 'https://api.groq.com/openai/v1/chat/completions' },
+  openrouter: { n: 'OpenRouter', m: '', u: 'https://openrouter.ai/api/v1/chat/completions' }, openai: { n: 'OpenAI', m: 'gpt-4o-mini', u: 'https://api.openai.com/v1/chat/completions' }, anthropic: { n: 'Claude (Anthropic)', m: 'claude-haiku-5-5' } };
+const PH = { gemini: 'Chave em aistudio.google.com/apikey (tem cota gratuita).', groq: 'Chave em console.groq.com (plano gratuito com limites). Modelo padrão: openai/gpt-oss-120b. Confira os modelos disponíveis no console.',
+  openrouter: 'Chave em openrouter.ai. Informe o modelo (há modelos gratuitos, com nome terminado em :free; veja a lista no site).', openai: 'Chave em platform.openai.com. A API é paga por uso e é separada do ChatGPT.', anthropic: 'Chave em console.anthropic.com. A API é paga por uso e é separada do app Claude.' };
+const pm = () => { const s = P.modelo || '', i = s.indexOf(':'), ok = i > 0 && PROV[s.slice(0, i)], k = ok ? s.slice(0, i) : 'gemini'; return { prov: k, model: ((ok ? s.slice(i + 1) : s) || '').trim() || PROV[k].m }; };
+const pvHint = () => { $('#pv-h').textContent = PH[$('#p-pv').value] + ' Trocou de provedor? Cole a chave dele.'; };
 async function ai(p) {
   if (P.gk) {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(P.modelo || 'gemini-2.5-flash-lite') + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': P.gk },
-      body: JSON.stringify({ contents: [{ parts: [{ text: p }] }], generationConfig: { responseMimeType: 'application/json' } }) });
-    const raw = await r.text(); if (!r.ok) throw new Error('Gemini ' + r.status + ' ' + raw.slice(0, 160));
-    return JSON.parse(JSON.parse(raw).candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim());
+    const { prov, model } = pm(), H = { 'Content-Type': 'application/json' }; let url, body, pick;
+    if (prov === 'gemini') { url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent'; H['x-goog-api-key'] = P.gk; body = { contents: [{ parts: [{ text: p }] }], generationConfig: { responseMimeType: 'application/json' } }; pick = j => j.candidates[0].content.parts[0].text; }
+    else if (prov === 'anthropic') { url = 'https://api.anthropic.com/v1/messages'; H['x-api-key'] = P.gk; H['anthropic-version'] = '2023-06-01'; H['anthropic-dangerous-direct-browser-access'] = 'true'; body = { model, max_tokens: 1500, messages: [{ role: 'user', content: p }] }; pick = j => j.content.map(c => c.text || '').join(''); }
+    else { if (!model) throw new Error('Informe o modelo nas configurações da IA (aba Plano).'); url = PROV[prov].u; H.Authorization = 'Bearer ' + P.gk; body = { model, messages: [{ role: 'user', content: p }], temperature: 0.3 }; pick = j => j.choices[0].message.content; }
+    const r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify(body) }), raw = await r.text();
+    if (!r.ok) throw new Error(PROV[prov].n + ' ' + r.status + ' ' + raw.slice(0, 160));
+    const t = pick(JSON.parse(raw)), i = t.indexOf('{'), e = t.lastIndexOf('}'); if (i < 0 || e < i) throw new Error('Resposta sem JSON: ' + t.slice(0, 100));
+    return JSON.parse(t.slice(i, e + 1));
   }
-  if (!C.WORKER_URL || /COLE_AQUI/.test(C.WORKER_URL)) throw new Error('Cole sua chave do Gemini na aba Plano.');
+  if (!C.WORKER_URL || /COLE_AQUI/.test(C.WORKER_URL)) throw new Error('Cole sua chave de IA na aba Plano.');
   const r = await fetch(C.WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ses.access_token }, body: JSON.stringify({ prompt: p }) });
   const raw = await r.text(); if (!r.ok) throw new Error(r.status + ' ' + raw.slice(0, 200)); return JSON.parse(JSON.parse(raw).text);
 }
@@ -207,7 +217,7 @@ async function fillAI() {
 /* ---------- plano ---------- */
 const vh_ = () => { const r = num($('#p-r').value), hh = num($('#x-h').value), d = num($('#x-d').value) || 5; $('#vh').textContent = r > 0 && hh > 0 ? '⏱️ Seu tempo vale cerca de ' + R(r / (hh * d * 4.345)) + ' por hora de trabalho.' : ''; };
 function plan() {
-  const e = P.ex || {}; $('#p-n').value = P.nome; $('#p-k').value = P.gk; $('#p-m').value = P.modelo; $('#p-r').value = P.renda || ''; $('#p-s').value = P.reserva || '';
+  const e = P.ex || {}; $('#p-n').value = P.nome; $('#p-k').value = P.gk; { const s = P.modelo || '', i = s.indexOf(':'), ok = i > 0 && PROV[s.slice(0, i)]; $('#p-pv').value = ok ? s.slice(0, i) : 'gemini'; $('#p-m').value = ok ? s.slice(i + 1) : s; pvHint(); } $('#p-r').value = P.renda || ''; $('#p-s').value = P.reserva || '';
   $('#x-o').value = e.ocup || ''; $('#x-h').value = e.hTrab || ''; $('#x-d').value = e.dSem || ''; $('#x-t').value = e.turno || ''; $('#x-e').value = e.hEst || ''; $('#x-et').value = e.eTurno || ''; vh_();
   FR = Object.entries(P.faturas).sort(); drawFat(); const lm = $('#lim'); lm.innerHTML = '';
   GC.forEach(k => { const r = h('div', 'r2'), i = h('input'); i.inputMode = 'decimal'; i.placeholder = 'sem limite'; i.dataset.k = k; i.value = P.limites[k] || ''; r.append(h('div', '', ci(k)[0] + ' ' + k), i); r.style.alignItems = 'center'; lm.appendChild(r); });
@@ -218,7 +228,7 @@ function drawFat() {
     m.onchange = () => x[0] = m.value; v.oninput = () => x[1] = v.value; d.style.flex = '0 0 40px'; d.onclick = () => { FR.splice(n, 1); drawFat(); }; r.append(m, v, d); f.appendChild(r); });
 }
 async function savePlan() {
-  P.nome = $('#p-n').value.trim(); P.gk = $('#p-k').value.trim(); P.modelo = $('#p-m').value.trim(); P.renda = num($('#p-r').value); P.reserva = num($('#p-s').value);
+  P.nome = $('#p-n').value.trim(); P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); P.renda = num($('#p-r').value); P.reserva = num($('#p-s').value);
   P.ex = { ocup: $('#x-o').value.trim(), hTrab: num($('#x-h').value), dSem: num($('#x-d').value), turno: $('#x-t').value, hEst: num($('#x-e').value), eTurno: $('#x-et').value };
   P.faturas = {}; FR.forEach(x => { if (x[0] && num(x[1]) > 0) P.faturas[x[0]] = num(x[1]); }); P.limites = {}; $$('#lim input').forEach(i => { if (num(i.value) > 0) P.limites[i.dataset.k] = num(i.value); });
   const row = { user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites, gemini_key: P.gk, modelo: P.modelo };
@@ -254,8 +264,8 @@ $('#q').oninput = e => { busca = e.target.value.toLowerCase(); list(); };
 $('#csv').onclick = () => { const rows = [['data', 'tipo', 'valor', 'categoria', 'descricao'], ...tx.map(x => [x.dia, x.tipo, x.valor, x.categoria, '"' + (x.descricao || '').replace(/"/g, '""') + '"'])];
   const a = h('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'mk-finance-ia.csv'; a.click(); };
 $('#fat-add').onclick = () => { FR.push([vm, '']); drawFat(); }; $('#p-save').onclick = savePlan; ['#p-r', '#x-h', '#x-d'].forEach(i => $(i).oninput = vh_);
-$('#an').onclick = analisar; $('#ai-fill').onclick = fillAI; $('#ai-add').onclick = lancarIA; ring(0);
-$('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = $('#p-m').value.trim(); $('#ai-res').textContent = 'Testando…'; try { const j = await ai('Responda SÓ JSON: {"ok":true}'); $('#ai-res').textContent = j.ok ? 'IA funcionando ✓ (toque em Salvar plano para guardar a chave)' : 'Resposta inesperada da IA.'; } catch (e) { $('#ai-res').textContent = 'Erro: ' + (e.message || e); } };
+$('#an').onclick = analisar; $('#ai-fill').onclick = fillAI; $('#ai-add').onclick = lancarIA; ring(0); $('#p-pv').onchange = pvHint;
+$('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); $('#ai-res').textContent = 'Testando…'; try { const j = await ai('Responda SÓ JSON: {"ok":true}'); $('#ai-res').textContent = j.ok ? 'IA funcionando ✓ com ' + PROV[pm().prov].n + ' (toque em Salvar plano para guardar)' : 'Resposta inesperada da IA.'; } catch (e) { $('#ai-res').textContent = 'Erro: ' + (e.message || e); } };
 [['💸 Gastei…', 'gastei '], ['🏦 Guardei…', 'guardei '], ['💰 Recebi…', 'recebi ']].forEach(([l, v]) => { const b = h('button', '', l); b.onclick = () => { $('#inp').value = v; $('#inp').focus(); }; $('#chips').appendChild(b); });
 ['Quanto gastei hoje?', 'Resumo do mês', 'Posso gastar 80 hoje?', 'Onde posso economizar?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button', '', '📈 Analisar minhas finanças'); b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
