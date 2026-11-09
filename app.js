@@ -148,19 +148,21 @@ function list() {
 }
 
 /* ---------- IA ---------- */
-const PROV = { gemini: { n: 'Gemini (Google)', m: 'gemini-2.5-flash-lite' }, groq: { n: 'Groq', m: 'openai/gpt-oss-120b', u: 'https://api.groq.com/openai/v1/chat/completions' },
+const GFALL = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+const PROV = { gemini: { n: 'Gemini (Google)', m: GFALL[0] }, groq: { n: 'Groq', m: 'openai/gpt-oss-120b', u: 'https://api.groq.com/openai/v1/chat/completions' },
   openrouter: { n: 'OpenRouter', m: '', u: 'https://openrouter.ai/api/v1/chat/completions' }, openai: { n: 'OpenAI', m: 'gpt-4o-mini', u: 'https://api.openai.com/v1/chat/completions' }, anthropic: { n: 'Claude (Anthropic)', m: 'claude-haiku-5-5' } };
-const PH = { gemini: 'Chave em aistudio.google.com/apikey (tem cota gratuita).', groq: 'Chave em console.groq.com (plano gratuito com limites). Modelo padrão: openai/gpt-oss-120b. Confira os modelos disponíveis no console.',
+const PH = { gemini: 'Chave em aistudio.google.com/apikey (tem cota gratuita). Modelos gratuitos atuais: gemini-3.5-flash-lite (padrão), gemini-3.1-flash-lite e gemini-3.8-flash. Se o modelo padrão falhar, o app tenta os outros sozinho.', groq: 'Chave em console.groq.com (plano gratuito com limites). Modelo padrão: openai/gpt-oss-120b. Confira os modelos disponíveis no console.',
   openrouter: 'Chave em openrouter.ai. Informe o modelo (há modelos gratuitos, com nome terminado em :free; veja a lista no site).', openai: 'Chave em platform.openai.com. A API é paga por uso e é separada do ChatGPT.', anthropic: 'Chave em console.anthropic.com. A API é paga por uso e é separada do app Claude.' };
-const pm = () => { const s = P.modelo || '', i = s.indexOf(':'), ok = i > 0 && PROV[s.slice(0, i)], k = ok ? s.slice(0, i) : 'gemini'; return { prov: k, model: ((ok ? s.slice(i + 1) : s) || '').trim() || PROV[k].m }; };
+const pm = () => { const s = P.modelo || '', i = s.indexOf(':'), ok = i > 0 && PROV[s.slice(0, i)], k = ok ? s.slice(0, i) : 'gemini'; const mm = ((ok ? s.slice(i + 1) : s) || '').trim(), ex = !!mm && !(k === 'gemini' && mm === 'gemini-2.5-flash-lite'); return { prov: k, model: ex ? mm : PROV[k].m, explicit: ex }; };
 const pvHint = () => { $('#pv-h').textContent = PH[$('#p-pv').value] + ' Trocou de provedor? Cole a chave dele.'; };
 async function ai(p) {
   if (P.gk) {
-    const { prov, model } = pm(), H = { 'Content-Type': 'application/json' }; let url, body, pick;
+    const { prov, model, explicit } = pm(), H = { 'Content-Type': 'application/json' }; let url, body, pick;
     if (prov === 'gemini') { url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent'; H['x-goog-api-key'] = P.gk; body = { contents: [{ parts: [{ text: p }] }], generationConfig: { responseMimeType: 'application/json' } }; pick = j => j.candidates[0].content.parts[0].text; }
     else if (prov === 'anthropic') { url = 'https://api.anthropic.com/v1/messages'; H['x-api-key'] = P.gk; H['anthropic-version'] = '2023-06-01'; H['anthropic-dangerous-direct-browser-access'] = 'true'; body = { model, max_tokens: 1500, messages: [{ role: 'user', content: p }] }; pick = j => j.content.map(c => c.text || '').join(''); }
     else { if (!model) throw new Error('Informe o modelo nas configurações da IA (aba Plano).'); url = PROV[prov].u; H.Authorization = 'Bearer ' + P.gk; body = { model, messages: [{ role: 'user', content: p }], temperature: 0.3 }; pick = j => j.choices[0].message.content; }
-    const r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify(body) }), raw = await r.text();
+    let r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify(body) }), raw = await r.text();
+    if (prov === 'gemini' && !explicit && r.status === 404) for (const m of GFALL) { if (m === model) continue; r = await fetch(url.replace(encodeURIComponent(model), encodeURIComponent(m)), { method: 'POST', headers: H, body: JSON.stringify(body) }); raw = await r.text(); if (r.status !== 404) break; }
     if (!r.ok) throw new Error(PROV[prov].n + ' ' + r.status + ' ' + raw.slice(0, 160));
     const t = pick(JSON.parse(raw)), i = t.indexOf('{'), e = t.lastIndexOf('}'); if (i < 0 || e < i) throw new Error('Resposta sem JSON: ' + t.slice(0, 100));
     return JSON.parse(t.slice(i, e + 1));
