@@ -29,8 +29,13 @@ const catsOf = m => { const o = {}; tx.filter(x => inM(x, m) && x.tipo === 'gast
 const reservaTotal = () => P.reserva + tx.filter(x => x.tipo === 'guardado').reduce((t, x) => t + +x.valor, 0) - tx.filter(x => x.tipo === 'resgate').reduce((t, x) => t + +x.valor, 0);
 const avgG = () => { const all = tx.filter(x => x.tipo === 'gasto'), n = new Set(all.map(x => x.dia.slice(0, 7))).size; return n ? all.reduce((a, x) => a + +x.valor, 0) / n : 0; };
 const vHora = () => { const e = P.ex || {}, hh = +e.hTrab, d = +e.dSem || 5; return P.renda > 0 && hh > 0 ? P.renda / (hh * d * 4.345) : 0; };
-const norm = i => { const t = ['entrada', 'guardado', 'resgate'].includes(i.tipo) ? i.tipo : 'gasto'; return { tipo: t, valor: +i.valor, categoria: t === 'entrada' ? 'Entrada' : t === 'gasto' ? (GC.includes(i.categoria) ? i.categoria : 'Outros') : 'Reserva', descricao: String(i.descricao || '').slice(0, 80), ...(/^\d{4}-\d{2}-\d{2}$/.test(i.data) ? { dia: i.data } : {}) }; };
-
+const norm = i => { const t = ['entrada', 'guardado', 'resgate'].includes(i.tipo) ? i.tipo : 'gasto'; return { tipo: t, valor: +i.valor, categoria: t === 'entrada' ? 'Entrada' : t === 'gasto' ? (GC.includes(i.categoria) ? i.categoria : 'Outros') : 'Reserva', descricao: String(i.descricao || '').slice(0, 80), ...(/^\d{4}-\d{2}-\d{2}$/.test(i.data) ? { dia: i.data } : /^\d{4}-\d{2}$/.test(i.data) ? { dia: i.data + '-01' } : {}), ...(+i.parcelas > 1 ? { parcelas: Math.round(+i.parcelas) } : {}), ...(+i.repetir > 1 ? { repetir: Math.round(+i.repetir) } : {}) }; };
+const nz = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const mkid = () => Math.random().toString(36).slice(2, 9);
+const metas = () => (P.ex.metas = P.ex.metas || []), devs = () => (P.ex.dev = P.ex.dev || []);
+const devTotal = () => devs().reduce((t, d) => t + Math.max(0, d.total - d.pago), 0);
+const findBy = (arr, nome) => { const q = nz(nome).trim(); return q ? arr.find(x => nz(x.nome) === q) || arr.find(x => nz(x.nome).includes(q) || q.includes(nz(x.nome))) : null; };
+const expand = list => list.flatMap(i => { const { parcelas, repetir, ...r } = i, n = Math.min(36, parcelas || repetir || 1); if (n < 2) return [r]; const d0 = r.dia || hoje(); return Array.from({ length: n }, (_, k) => { const m = shift(d0.slice(0, 7), k); return { ...r, dia: m + '-' + pad(Math.min(+d0.slice(8), dim(m))), descricao: parcelas ? ((r.descricao || r.categoria) + ' (' + (k + 1) + '/' + n + ')').slice(0, 80) : r.descricao }; }); });
 const K = [['Mercado', /mercado|supermercado|feira|açougue/], ['Alimentação', /lanche|almo[cç]o|jantar|ifood|restaurante|pizza|café|padaria|comida/], ['Transporte', /uber|[oô]nibus|gasolina|passagem|combust/],
   ['Faculdade', /faculdade|livro|xerox|apostila|curso|mensalidade/], ['Lazer', /cinema|jogo|netflix|spotify|festa|rol[eê]/], ['Saúde', /farm[aá]cia|rem[eé]dio|m[eé]dico|dentista/],
   ['Fatura do cartão', /fatura|cart[aã]o|nubank/], ['Empréstimo a amigos', /emprestei|emprestou/]];
@@ -58,6 +63,8 @@ function story() {
   const rt = reservaTotal(), av = avgG(); if (rt > 0 && av > 0) { const mm = rt / av; o.push({ i: '🏦', k: mm >= 6 ? 'good' : mm >= 3 ? 'info' : 'warn', t: 'Sua reserva de ' + R(rt) + ' cobre cerca de ' + mm.toFixed(1).replace('.', ',') + ' meses no seu ritmo de gastos.' }); }
   Object.keys(P.limites).forEach(k => { const u = by[k] || 0, l = +P.limites[k]; if (l > 0 && u > l) o.push({ i: '🚧', k: 'bad', t: 'Você passou do limite em ' + k + ': ' + R(u) + ' de ' + R(l) + '.' }); else if (l > 0 && u > l * .8) o.push({ i: '⚠️', k: 'warn', t: k + ' já usou ' + Math.round(u / l * 100) + '% do limite do mês.' }); });
   const vh = vHora(); if (vh && g) o.push({ i: '⏱️', k: 'info', t: 'Seus gastos de ' + mname(vm) + ' equivalem a cerca de ' + (g / vh).toFixed(1).replace('.', ',') + ' horas de trabalho. Seu tempo vale ~' + R(vh) + ' por hora.' });
+  if (devTotal() > 0) o.push({ i: '🤝', k: 'info', t: 'Seus amigos ainda te devem ' + R(devTotal()) + ' no total. Veja os detalhes na aba Metas.' });
+  metas().filter(m => m.alvo > 0).forEach(m => o.push({ i: '💎', k: m.atual >= m.alvo ? 'good' : 'info', t: 'Meta ' + m.nome + ': ' + Math.round(Math.min(100, m.atual / m.alvo * 100)) + '% concluída (' + R(m.atual) + ' de ' + R(m.alvo) + ').' }));
   return o;
 }
 const GEN = ['Pague a fatura do cartão sempre integral para fugir dos juros do rotativo.', 'Espere 24 horas antes de qualquer compra que não estava planejada.', 'Revise assinaturas e débitos automáticos uma vez por mês.', 'Registre o gasto no mesmo dia: leva 5 segundos e evita esquecimentos.',
@@ -71,16 +78,25 @@ function tips() {
   if (av && rt / av < 3) L.push('Uma boa meta inicial é ter uma reserva que cubra 3 meses de gastos. Um valor pequeno e constante já te aproxima disso.');
   if (nx && P.renda && nx > P.renda * .5) L.push('A fatura do próximo mês é alta perto da sua renda. Evite novas parcelas e combine antes o repasse de quem usa o seu cartão.');
   if (vHora()) L.push('Antes de uma compra grande, converta o preço em horas de trabalho. Seu tempo vale cerca de ' + R(vHora()) + ' por hora.');
+  if (devTotal() > 0) L.push('Seus amigos ainda te devem ' + R(devTotal()) + '. Cobre antes do vencimento da fatura para que o valor não saia do seu bolso.');
   const d = Math.floor(Date.now() / 864e5); return L.concat(GEN.map((_, i) => GEN[(i + d) % GEN.length])).slice(0, 4);
 }
 
 /* ---------- dados ---------- */
 async function loadP() { const { data } = await sb.from('profiles').select('*').maybeSingle(); if (data) P = { nome: data.nome || '', renda: +data.renda || 0, reserva: +data.reserva || 0, faturas: data.faturas || {}, limites: data.limites || {}, gk: data.gemini_key || '', modelo: data.modelo || '', ex: data.extra || {} };
-  try { const l = JSON.parse(localStorage.getItem('mk_ai_' + ses.user.id) || '{}'); if (!P.gk && l.gk) { P.gk = l.gk; P.modelo = l.modelo || P.modelo; } } catch (e) { }
+  try { const l = JSON.parse(localStorage.getItem('mk_ai_' + ses.user.id) || '{}'); if (!P.gk && l.gk) { P.gk = l.gk; P.modelo = l.modelo || P.modelo; } const x = JSON.parse(localStorage.getItem('mk_ex_' + ses.user.id) || 'null'); if (x && !(P.ex.metas || P.ex.dev || P.ex.hTrab || P.ex.ocup)) P.ex = x; } catch (e) { }
+}
+async function saveProfile() {
+  saveAI(); try { localStorage.setItem('mk_ex_' + ses.user.id, JSON.stringify(P.ex)); } catch (e) { }
+  const base = { user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites };
+  const tries = [{ ...base, gemini_key: P.gk, modelo: P.modelo, extra: P.ex }, { ...base, gemini_key: P.gk, modelo: P.modelo }, base]; let error, k = 0;
+  for (; k < tries.length; k++) { ({ error } = await sb.from('profiles').upsert(tries[k], { onConflict: 'user_id' })); if (!error) break; }
+  return { error, k };
 }
 const saveAI = () => { try { localStorage.setItem('mk_ai_' + ses.user.id, JSON.stringify({ gk: P.gk, modelo: P.modelo })); } catch (e) { } };
 async function load() { const { data } = await sb.from('transactions').select('*').order('dia', { ascending: false }).limit(1000); tx = data || []; render(); }
-async function add(items, dia) { if (!items.length) return; const { error } = await sb.from('transactions').insert(items.map(i => ({ ...i, dia: i.dia || dia || hoje() }))); if (error) toast('Erro: ' + error.message); await load(); }
+let lastIds = [];
+async function add(items, dia) { if (!items.length) return; const { data, error } = await sb.from('transactions').insert(items.map(i => ({ ...i, dia: i.dia || dia || hoje() }))).select('id'); lastIds = (data || []).map(x => x.id); if (error) toast('Erro: ' + error.message); await load(); }
 
 /* ---------- renderização ---------- */
 function render() {
@@ -92,7 +108,7 @@ function render() {
   const S = story(), box = (el, arr) => { el.innerHTML = ''; arr.forEach((x, i) => { const r = h('div', 'st ' + x.k), ic = h('i', '', x.i); r.style.animationDelay = i * .08 + 's'; r.append(ic, h('div', '', x.t)); el.appendChild(r); }); };
   box($('#story-s'), S.slice(0, 3)); box($('#story'), S);
   const tp = $('#tips'); tp.innerHTML = ''; T.forEach((t, i) => { const d = h('div', 'tp', t); d.style.animationDelay = i * .1 + 's'; tp.appendChild(d); });
-  stats(); lineChart(); donut(); daily(); budgets(); list();
+  stats(); lineChart(); donut(); daily(); budgets(); list(); goalsView();
 }
 function stats() {
   const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), f = P.faturas[vm], all = tx.filter(x => x.tipo === 'gasto'), tot = all.reduce((a, x) => a + +x.valor, 0), ms = new Set(all.map(x => x.dia.slice(0, 7))).size;
@@ -139,6 +155,20 @@ function budgets() {
     t.append(h('span', '', ci(k)[0] + ' ' + k), h('span', '', R(u) + ' / ' + R(l) + ' (' + Math.round(p) + '%)')); i.style.background = p > 100 ? 'var(--bad)' : p > 80 ? 'var(--warn)' : 'var(--ac)';
     setTimeout(() => i.style.width = Math.min(100, p) + '%', 40); tr.appendChild(i); row.append(t, tr); bd.appendChild(row); });
 }
+function glRow(title, right, pct, sub, btns) { const r = h('div', 'gl'), top = h('div', 'top'), bar = h('div', 'tr'), f = h('i'); top.append(h('b', '', title), h('span', 'l', right)); bar.appendChild(f); setTimeout(() => f.style.width = pct + '%', 40); r.append(top, bar); if (sub) r.appendChild(h('div', 'l', sub));
+  const bx = h('div', 'r'); btns.forEach(([t, fn]) => { const b = h('button', 's', t); b.onclick = fn; bx.appendChild(b); }); r.appendChild(bx); return r; }
+function goalsView() {
+  const gm = $('#gm'), dv = $('#dv'); gm.innerHTML = ''; dv.innerHTML = '';
+  if (!metas().length) gm.innerHTML = '<span class="hint">Nenhuma meta ainda. Diga no Assistente: “quero juntar 3.000 para um notebook até junho”, ou crie abaixo.</span>';
+  metas().forEach((m, i) => { const p = m.alvo > 0 ? Math.min(100, m.atual / m.alvo * 100) : 0; let sub = '';
+    if (m.alvo > 0 && m.atual >= m.alvo) sub = '🎉 Meta atingida!'; else if (m.alvo > 0) { sub = 'Faltam ' + R(m.alvo - m.atual); if (m.prazo) { const n = (+m.prazo.slice(0, 4) - +hoje().slice(0, 4)) * 12 + (+m.prazo.slice(5) - +hoje().slice(5, 7)); sub += n > 0 ? ' · até ' + mlabel(m.prazo, 1) + '/' + m.prazo.slice(0, 4) + ': guarde ' + R((m.alvo - m.atual) / n) + ' por mês' : ' · prazo vencido'; } }
+    gm.appendChild(glRow('💎 ' + m.nome, R(m.atual) + ' / ' + R(m.alvo), p, sub, [['+ aporte', async () => { const v = num(prompt('Quanto você guardou para esta meta? (R$)') || ''); if (v > 0) { m.atual += v; await saveProfile(); render(); toast('Aporte registrado ✓'); } }],
+      ['×', async () => { if (confirm('Apagar a meta ' + m.nome + '?')) { metas().splice(i, 1); await saveProfile(); render(); } }]])); });
+  $('#dv-t').textContent = devs().length ? 'Total a receber: ' + R(devTotal()) : 'Ninguém te deve nada registrado. Diga no Assistente: “o Adson ficou me devendo 300”.';
+  devs().forEach((d, i) => { const rest = d.total - d.pago;
+    dv.appendChild(glRow('🤝 ' + d.nome, rest > 0 ? 'resta ' + R(rest) + ' de ' + R(d.total) : 'quitado ✓', d.total > 0 ? d.pago / d.total * 100 : 0, '', [['Recebi', async () => { const v = num(prompt('Quanto ' + d.nome + ' pagou? (R$)') || ''); if (v > 0) { d.pago = Math.min(d.total, d.pago + v); await saveProfile(); render(); toast('Pagamento registrado ✓'); } }],
+      ['×', async () => { if (confirm('Remover ' + d.nome + ' da lista?')) { devs().splice(i, 1); await saveProfile(); render(); } }]])); });
+}
 function list() {
   const el = $('#list'); el.innerHTML = ''; const vh = vHora(), rows = tx.filter(x => inM(x, vm) && (x.descricao + ' ' + x.categoria).toLowerCase().includes(busca));
   if (!rows.length) el.innerHTML = '<span class="hint">Nenhum lançamento neste mês.</span>';
@@ -172,19 +202,64 @@ async function ai(p) {
   const raw = await r.text(); if (!r.ok) throw new Error(r.status + ' ' + raw.slice(0, 200)); return JSON.parse(JSON.parse(raw).text);
 }
 const rotina = () => { const e = P.ex || {}; return 'Rotina: ' + (e.ocup || 'não informada') + '; trabalha ' + (e.hTrab || '?') + 'h/dia, ' + (e.dSem || 5) + ' dias/semana, turno ' + (e.turno || '?') + '; estuda ' + (e.hEst || '?') + 'h/dia, turno ' + (e.eTurno || '?') + (vHora() ? '; valor da hora ≈ R$ ' + vHora().toFixed(2) : '') + '.'; };
-function prompt_(t) {
+const HIST = [];
+function ctx() {
+  const hm = hoje().slice(0, 7), M = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos: Math.round(sum(m, 'gasto')), entradas: Math.round(sum(m, 'entrada')), guardado: Math.round(sum(m, 'guardado')), categorias: catsOf(m) }; });
+  const F = [1, 2, 3, 4, 5, 6].map(i => { const m = shift(hm, i); return { mes: m, gastosAgendados: Math.round(sum(m, 'gasto')), fatura: P.faturas[m] || 0 }; }).filter(x => x.gastosAgendados || x.fatura);
   const cur = tx.filter(x => inM(x, vm)).slice(0, 40).map(x => x.dia + ' ' + x.tipo + ' ' + x.valor + ' ' + x.categoria + ' ' + (x.descricao || '').slice(0, 40)).join('\n') || '(nenhum)';
-  return 'Você é o assistente financeiro pessoal e privado de ' + (P.nome || 'o usuário') + '. Responda em português do Brasil, curto, calmo, prático e realista, sem alarmismo.\nRenda mensal: R$ ' + P.renda + '. Reserva: R$ ' + reservaTotal() + '. Faturas do cartão por mês: ' + JSON.stringify(P.faturas) + '. Limites por categoria: ' + JSON.stringify(P.limites) + '. ' + rotina() +
-    '\nHoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nLançamentos do mês:\n' + cur + '\nCategorias: ' + GC.join(', ') + ', Entrada. Tipos: gasto, entrada, guardado (dinheiro colocado na reserva), resgate (retirado da reserva).\nMensagem: ' + t +
-    '\nResponda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada"|"guardado"|"resgate","valor":número,"categoria":"...","descricao":"..."}],"resposta":"texto"}. Se a mensagem registra algo, preencha itens e confirme em "resposta". Se for pergunta ou conversa, itens vazio e responda com base nos dados.';
+  return 'Hoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nPERFIL: ' + JSON.stringify({ nome: P.nome, renda: P.renda, reserva_total: Math.round(reservaTotal()), faturas_cartao: P.faturas, limites: P.limites, valor_hora: Math.round(vHora() * 100) / 100 }) + ' ' + rotina() +
+    '\nMETAS: ' + JSON.stringify(metas().map(m => ({ nome: m.nome, alvo: m.alvo, atual: m.atual, prazo: m.prazo }))) + '\nQUEM DEVE AO USUÁRIO: ' + JSON.stringify(devs().map(d => ({ nome: d.nome, total: d.total, pago: d.pago }))) +
+    '\nÚLTIMOS 6 MESES: ' + JSON.stringify(M) + '\nPRÓXIMOS MESES (agendado): ' + JSON.stringify(F) + '\nLANÇAMENTOS DE ' + vm + ':\n' + cur;
+}
+const SCHEMA = 'Responda SÓ JSON (omita o que não se aplica): {"resposta":"texto","itens":[{"tipo":"gasto"|"entrada"|"guardado"|"resgate","valor":número,"categoria":"...","descricao":"curta","data":"AAAA-MM-DD","parcelas":número,"repetir":número}],"faturas":{"AAAA-MM":número},"limites":{"Categoria":número},"perfil":{"nome":"","renda":número,"reserva_total":número,"ocupacao":"","hTrab":número,"dSem":número,"turno":"","hEst":número,"eTurno":""},"metas":[{"nome":"","alvo":número,"prazo":"AAAA-MM","aporte":número}],"devedores":[{"nome":"","valor":número}],"recebimentos":[{"nome":"","valor":número}],"apagar":[{"busca":"","mes":"AAAA-MM"}],"editar":[{"busca":"","mes":"AAAA-MM","novo_valor":número,"nova_categoria":"","nova_data":"AAAA-MM-DD","nova_descricao":""}]}\n' +
+  'Regras: 1) "resposta" é obrigatória: confirme o que foi feito ou responda à pergunta usando só os dados fornecidos (faça as contas com cuidado; se faltar dado, diga). 2) "data" só se não for hoje; qualquer item em outro mês precisa de "data". 3) Compra parcelada: um item com "parcelas" e "valor" de CADA parcela, "data" da primeira. Conta fixa ou assinatura mensal: "repetir" com o número de meses. 4) O total da fatura do cartão de um mês vai em "faturas", nunca em itens; pagar a fatura é um gasto na categoria Fatura do cartão. 5) Quando alguém passa a dever ao usuário (ex.: usou o cartão dele), use "devedores"; quando essa pessoa paga, use "recebimentos". 6) Aporte em meta: use "metas" com "aporte" e inclua também um item "guardado". 7) "apagar" e "editar" só quando o usuário pedir explicitamente; o app pede confirmação. 8) Não invente valores nem itens e não recomende investimentos específicos.';
+function prompt_(t) {
+  return 'Você é o assistente financeiro pessoal e privado de ' + (P.nome || 'o usuário') + '. Responda em português do Brasil: curto, calmo, prático, realista e sem alarmismo.\n' + ctx() + '\nCategorias de gasto: ' + GC.join(', ') + '.\nCONVERSA RECENTE: ' +
+    (HIST.slice(-4).map(x => 'Usuário: ' + x[0] + ' | Você: ' + x[1]).join('\n') || '(início)') + '\nMENSAGEM: ' + t + '\n\n' + SCHEMA;
+}
+function alerts(its) {
+  const seen = new Set(), o = []; its.filter(i => i.tipo === 'gasto').forEach(i => { const m = (i.dia || hoje()).slice(0, 7), k = i.categoria, key = m + k, l = +P.limites[k]; if (!l || seen.has(key)) return; seen.add(key);
+    const u = catsOf(m)[k] || 0; if (u > l) o.push('🚧 Limite de ' + k + ' estourado em ' + mlabel(m, 1) + ': ' + R(u) + ' de ' + R(l) + '.'); else if (u > l * .8) o.push('⚠️ ' + k + ' já usou ' + Math.round(u / l * 100) + '% do limite de ' + mlabel(m, 1) + '.'); });
+  return o.length ? '\n' + o.join('\n') : '';
+}
+async function exec(j) {
+  const S = []; let dirty = false, guard = false;
+  Object.entries(j.faturas || {}).forEach(([m, v]) => { if (/^\d{4}-\d{2}$/.test(m) && +v > 0) { P.faturas[m] = +v; dirty = true; S.push('Fatura de ' + mlabel(m, 1) + '/' + m.slice(0, 4) + ': ' + R(v)); } });
+  Object.entries(j.limites || {}).forEach(([k, v]) => { if (GC.includes(k) && v != null && +v >= 0) { if (+v > 0) { P.limites[k] = +v; S.push('Limite de ' + k + ': ' + R(v)); } else { delete P.limites[k]; S.push('Limite de ' + k + ' removido'); } dirty = true; } });
+  const pf = j.perfil || {};
+  if (pf.nome) { P.nome = String(pf.nome).slice(0, 40); dirty = true; S.push('Nome: ' + P.nome); }
+  if (+pf.renda > 0) { P.renda = +pf.renda; dirty = true; S.push('Renda: ' + R(P.renda)); }
+  if (pf.reserva_total != null && pf.reserva_total !== '' && !isNaN(+pf.reserva_total)) { P.reserva = +pf.reserva_total - (reservaTotal() - P.reserva); dirty = true; S.push('Reserva: ' + R(pf.reserva_total)); }
+  [['ocupacao', 'ocup'], ['hTrab', 'hTrab'], ['dSem', 'dSem'], ['turno', 'turno'], ['hEst', 'hEst'], ['eTurno', 'eTurno']].forEach(([a_, b_]) => { if (pf[a_] != null && pf[a_] !== '') { P.ex[b_] = pf[a_]; dirty = true; S.push('Rotina atualizada'); } });
+  (j.metas || []).forEach(m => { if (!m.nome) return; let g = findBy(metas(), m.nome); if (!g) { g = { id: mkid(), nome: String(m.nome).slice(0, 40), alvo: 0, prazo: '', atual: 0 }; metas().push(g); S.push('Meta criada: ' + g.nome); }
+    if (+m.alvo > 0) g.alvo = +m.alvo; if (/^\d{4}-\d{2}$/.test(m.prazo)) g.prazo = m.prazo; if (+m.aporte > 0) { g.atual += +m.aporte; S.push(R(m.aporte) + ' na meta ' + g.nome); } dirty = true; });
+  (j.devedores || []).forEach(d => { if (!d.nome || !(+d.valor > 0)) return; let x = findBy(devs(), d.nome); if (!x) { x = { id: mkid(), nome: String(d.nome).slice(0, 40), total: 0, pago: 0 }; devs().push(x); } x.total += +d.valor; dirty = true; S.push(x.nome + ' agora te deve +' + R(d.valor)); });
+  (j.recebimentos || []).forEach(d => { const x = d.nome && findBy(devs(), d.nome); if (!x || !(+d.valor > 0)) return; x.pago = Math.min(x.total, x.pago + +d.valor); dirty = true; S.push(x.nome + ' pagou ' + R(d.valor) + (x.total - x.pago > 0 ? ' (resta ' + R(x.total - x.pago) + ')' : ' (quitado ✓)')); });
+  const its = expand((j.itens || []).map(norm).filter(i => i.valor > 0)); if (dirty) await saveProfile();
+  if (its.length) { await add(its); S.unshift(its.length + ' lançamento(s) registrado(s)'); guard = its.some(i => i.tipo === 'guardado'); } else if (dirty) render();
+  return { sum: S, ids: its.length ? lastIds.slice() : [], al: alerts(its), guard };
+}
+function undoBtn(w, ids) { const u = h('button', 's', '↩ Desfazer lançamentos'); u.style.marginTop = '6px'; u.onclick = async () => { await sb.from('transactions').delete().in('id', ids); toast('Desfeito'); u.remove(); load(); }; w.appendChild(h('br')); w.appendChild(u); }
+function ask(text, yes) { const d = say(text), b = h('div', 'r'), y = h('button', '', 'Confirmar'), n = h('button', 's', 'Cancelar'); y.onclick = async () => { b.remove(); await yes(); }; n.onclick = () => { b.remove(); d.append(' (cancelado)'); }; b.append(y, n); d.appendChild(b); }
+function propose(del, ed) {
+  const find = (b, m) => { const q = nz(b); return q ? tx.filter(x => (!m || inM(x, m)) && nz(x.descricao + ' ' + x.categoria).includes(q)) : []; };
+  const dl = [...new Map((del || []).flatMap(d => find(d.busca, d.mes)).map(x => [x.id, x])).values()];
+  if (dl.length) ask('Apagar ' + dl.length + ' lançamento(s)?\n' + dl.slice(0, 8).map(x => '• ' + x.dia.slice(5).split('-').reverse().join('/') + ' ' + (x.descricao || x.categoria) + ' ' + R(x.valor)).join('\n') + (dl.length > 8 ? '\n…' : ''), async () => { await sb.from('transactions').delete().in('id', dl.map(x => x.id)); await load(); toast('Apagado'); });
+  (ed || []).forEach(e => { const ms = find(e.busca, e.mes); if (!ms.length) return; const ch = {}; if (+e.novo_valor > 0) ch.valor = +e.novo_valor; if (GC.includes(e.nova_categoria)) ch.categoria = e.nova_categoria; if (/^\d{4}-\d{2}-\d{2}$/.test(e.nova_data)) ch.dia = e.nova_data; if (e.nova_descricao) ch.descricao = String(e.nova_descricao).slice(0, 80); if (!Object.keys(ch).length) return;
+    ask('Alterar ' + ms.length + ' lançamento(s)?\n' + ms.slice(0, 5).map(x => '• ' + (x.descricao || x.categoria) + ' ' + R(x.valor)).join('\n') + '\nNovo: ' + Object.entries(ch).map(([k, v]) => k + ' = ' + v).join(', '), async () => { await sb.from('transactions').update(ch).in('id', ms.map(x => x.id)); await load(); toast('Alterado ✓'); }); });
 }
 function say(t, me) { const d = h('div', 'm' + (me ? ' me' : ''), t); $('#chat').appendChild(d); $('#chat').scrollTop = 1e9; return d; }
 async function send() {
   const t = $('#inp').value.trim(); if (!t) return; $('#inp').value = ''; say(t, 1);
-  const p = parse(t); if (p) { await add([p]); say('✓ ' + { gasto: 'Gasto', entrada: 'Entrada', guardado: 'Guardado na reserva', resgate: 'Resgate da reserva' }[p.tipo] + ' de ' + R(p.valor) + (p.tipo === 'gasto' ? ' em ' + p.categoria : '') + ' anotado.'); if (p.tipo === 'guardado') celebrate('💙'); if (p.tipo === 'entrada') celebrate('💰'); return; }
+  const p = parse(t);
+  if (p) { await add([p]); say('✓ ' + { gasto: 'Gasto', entrada: 'Entrada', guardado: 'Guardado na reserva', resgate: 'Resgate da reserva' }[p.tipo] + ' de ' + R(p.valor) + (p.tipo === 'gasto' ? ' em ' + p.categoria : '') + ' anotado.' + alerts([p])); HIST.push([t, 'anotado']); if (p.tipo === 'guardado') celebrate('💙'); if (p.tipo === 'entrada') celebrate('💰'); return; }
   const w = say(''); w.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
-  try { const j = await ai(prompt_(t)), its = (j.itens || []).map(norm).filter(i => i.valor > 0); await add(its); w.textContent = j.resposta || 'Ok.'; if (its.some(i => i.tipo === 'guardado')) celebrate('💙'); }
-  catch (e) { w.textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e) + '\n(Frases como “gastei 50 no mercado” ou “guardei 200” funcionam sem IA.)'; }
+  try {
+    const j = await ai(prompt_(t)), r = await exec(j);
+    w.textContent = (j.resposta || 'Ok.') + (r.sum.length ? '\n' + r.sum.map(x => '• ' + x).join('\n') : '') + r.al; HIST.push([t, String(j.resposta || '').slice(0, 200)]);
+    if (r.ids.length) undoBtn(w, r.ids); if (r.guard) celebrate('💙'); propose(j.apagar, j.editar);
+  } catch (e) { w.textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e) + '\n(Frases como “gastei 50 no mercado” ou “guardei 200” funcionam sem IA.)'; }
+  $('#chat').scrollTop = 1e9;
 }
 const ring = (n, c) => { const s = $('#score'); s.innerHTML = ''; sv('circle', { cx: 21, cy: 21, r: 15.915, fill: 'none', stroke: '#121b30', 'stroke-width': 4 }, s); const e = sv('circle', { cx: 21, cy: 21, r: 15.915, fill: 'none', stroke: c || '#4d8dff', 'stroke-width': 4, 'stroke-linecap': 'round', style: 'stroke-dasharray:0 100' }, s); setTimeout(() => e.style.strokeDasharray = n + ' ' + (100 - n), 40); };
 function drawIns() {
@@ -202,12 +277,7 @@ async function analisar() {
     '\nÚltimos 6 meses: ' + JSON.stringify(dados) + '\nMês atual: ' + hm + '.\nResponda SÓ JSON: {"nota":0 a 100,"resumo":"2 frases","pontos_fortes":["..."],"alertas":["..."],"dicas":[{"titulo":"...","texto":"...","economia_mensal_estimada":número}],"meta":"uma meta realista"}. Use só os dados fornecidos e não invente valores. Com poucos dados, diga isso e dê nota cautelosa. Considere a rotina de trabalho e estudo nas dicas. Sem recomendar investimentos específicos. Máximo 3 itens por lista.';
   try { INS = await ai(p); drawIns(); } catch (e) { $('#in-r').textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e); } b.disabled = false; b.textContent = '✨ Analisar novamente';
 }
-async function lancarIA() {
-  const t = $('#ai-l').value.trim(); if (!t) return toast('Cole seus gastos primeiro'); const b = $('#ai-add'); b.disabled = true; b.textContent = 'Classificando…';
-  const p = 'Transforme o texto em lançamentos financeiros. Hoje é ' + hoje() + '. Categorias: ' + GC.join(', ') + ', Entrada. Responda SÓ JSON: {"itens":[{"tipo":"gasto"|"entrada"|"guardado"|"resgate","valor":número,"categoria":"...","descricao":"curta","data":"AAAA-MM-DD"}]}. Sem data, use hoje; "ontem" é o dia anterior. Não invente itens.\nTexto: ' + t.slice(0, 2000);
-  try { const j = await ai(p), its = (j.itens || []).map(norm).filter(i => i.valor > 0); await add(its); $('#ai-l').value = ''; toast(its.length + ' lançamento(s) adicionados ✓'); } catch (e) { toast('IA indisponível: ' + String(e.message || e).slice(0, 80)); }
-  b.disabled = false; b.textContent = 'Classificar e lançar';
-}
+async function lancarIA() { const t = $('#ai-l').value.trim(); if (!t) return toast('Cole seus gastos primeiro'); $('#ai-l').value = ''; go('ai'); $('#inp').value = t; send(); }
 async function fillAI() {
   const t = $('#ai-p').value.trim(); if (!t) return toast('Escreva algo primeiro'); const b = $('#ai-fill'); b.disabled = true; b.textContent = 'Lendo…';
   const p = 'Extraia dados financeiros pessoais do texto. Hoje é ' + hoje() + '. Responda SÓ JSON: {"nome":"","renda":número ou null,"reserva":número ou null,"faturas":{"AAAA-MM":número},"limites":{"Categoria":número},"rotina":{"ocupacao":"","hTrab":número,"dSem":número,"turno":"manhã|tarde|noite|integral|variável","hEst":número,"eTurno":"manhã|tarde|noite|EAD|não estudo"}}. Categorias válidas para limites: ' + GC.join(', ') + '. Omita ou use null o que não foi dito; não invente. Meses sem ano são o mais próximo no futuro.\nTexto: ' + t.slice(0, 1500);
@@ -234,16 +304,14 @@ function drawFat() {
 }
 async function savePlan() {
   P.nome = $('#p-n').value.trim(); P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); P.renda = num($('#p-r').value); P.reserva = num($('#p-s').value);
-  P.ex = { ocup: $('#x-o').value.trim(), hTrab: num($('#x-h').value), dSem: num($('#x-d').value), turno: $('#x-t').value, hEst: num($('#x-e').value), eTurno: $('#x-et').value };
+  P.ex = { ...P.ex, ocup: $('#x-o').value.trim(), hTrab: num($('#x-h').value), dSem: num($('#x-d').value), turno: $('#x-t').value, hEst: num($('#x-e').value), eTurno: $('#x-et').value };
   P.faturas = {}; FR.forEach(x => { if (x[0] && num(x[1]) > 0) P.faturas[x[0]] = num(x[1]); }); P.limites = {}; $$('#lim input').forEach(i => { if (num(i.value) > 0) P.limites[i.dataset.k] = num(i.value); });
-  saveAI(); const base = { user_id: ses.user.id, nome: P.nome, renda: P.renda, reserva: P.reserva, faturas: P.faturas, limites: P.limites };
-  const tries = [{ ...base, gemini_key: P.gk, modelo: P.modelo, extra: P.ex }, { ...base, gemini_key: P.gk, modelo: P.modelo }, base]; let error, k = 0;
-  for (; k < tries.length; k++) { ({ error } = await sb.from('profiles').upsert(tries[k], { onConflict: 'user_id' })); if (!error) break; }
-  toast(error ? 'Erro: ' + error.message : k === 0 ? 'Plano salvo ✓' : 'Salvo, mas faltam colunas no banco: rode os SQL das atualizações 2 e 3. A chave da IA ficou salva neste aparelho.'); render();
+  const { error, k } = await saveProfile();
+  toast(error ? 'Erro: ' + error.message : k === 0 ? 'Plano salvo ✓' : 'Salvo, mas faltam colunas no banco: rode os SQL das atualizações 2 e 3. Dados guardados neste aparelho.'); render();
 }
 
 /* ---------- navegação e eventos ---------- */
-const TT = { ai: ['Assistente', 'Converse comigo para registrar e entender o seu dinheiro'], home: ['Painel', 'Seu retrato financeiro em números e gráficos'], tx: ['Lançamentos', 'Tudo o que você registrou'], plan: ['Plano', 'Perfil, rotina, faturas e limites'] };
+const TT = { ai: ['Assistente', 'Converse comigo para registrar e entender o seu dinheiro'], home: ['Painel', 'Seu retrato financeiro em números e gráficos'], tx: ['Lançamentos', 'Tudo o que você registrou'], plan: ['Plano', 'Perfil, rotina, faturas e limites'], goals: ['Metas e dívidas', 'Seus objetivos e quanto os amigos te devem'] };
 function go(t) {
   tab = t; $$('main > section').forEach(s => s.hidden = s.id !== 't-' + t); $$('#nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   $('#pt').textContent = TT[t][0]; $('#ps').textContent = TT[t][1]; $('#mbar').hidden = !(t === 'home' || t === 'tx');
@@ -254,7 +322,7 @@ async function show(s) {
   ses = s; $('#login').hidden = !!s; $('#app').hidden = !s;
   if (!s) { tx = []; P = blank(); INS = null; $('#chat').innerHTML = ''; return; }
   await loadP(); await load(); go('ai');
-  if (!$('#chat').children.length) say('Oi, ' + (P.nome || 'tudo bem') + '! Eu anoto tudo para você. Pode escrever: “gastei 50 no mercado”, “guardei 200”, “recebi 1.100 de salário” ou “retirei 80 da reserva”. Também respondo dúvidas sobre o seu dinheiro. Dica: na aba Plano você pode me contar sua rotina e seus números num texto só e eu preencho.');
+  if (!$('#chat').children.length) say('Oi, ' + (P.nome || 'tudo bem') + '! Eu cuido do seu dinheiro com você. Posso anotar gastos, entradas e o que você guarda; registrar faturas do cartão, parcelas e contas fixas; criar metas; controlar quem te deve; definir limites por categoria; corrigir ou apagar lançamentos (sempre com a sua confirmação) e responder perguntas sobre os seus números.\n\nExemplos: “gastei 50 no mercado”, “parcelei um tênis em 3x de 100”, “fatura de dezembro é 1.194”, “o Adson ficou me devendo 300”, “quero juntar 3.000 para um notebook até junho”, “limite de lazer 200”.');
 }
 $('#go').onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $('#em').value, password: $('#pw').value }); $('#err').textContent = error ? 'Erro: ' + error.message : ''; };
 $('#pw').onkeydown = e => { if (e.key === 'Enter') $('#go').click(); };
@@ -269,9 +337,12 @@ $('#q').oninput = e => { busca = e.target.value.toLowerCase(); list(); };
 $('#csv').onclick = () => { const rows = [['data', 'tipo', 'valor', 'categoria', 'descricao'], ...tx.map(x => [x.dia, x.tipo, x.valor, x.categoria, '"' + (x.descricao || '').replace(/"/g, '""') + '"'])];
   const a = h('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'mk-finance-ia.csv'; a.click(); };
 $('#fat-add').onclick = () => { FR.push([vm, '']); drawFat(); }; $('#p-save').onclick = savePlan; ['#p-r', '#x-h', '#x-d'].forEach(i => $(i).oninput = vh_);
+$('#g-add').onclick = async () => { const n = $('#g-n').value.trim(); if (!n) return toast('Dê um nome para a meta'); metas().push({ id: mkid(), nome: n.slice(0, 40), alvo: num($('#g-a').value), prazo: $('#g-p').value || '', atual: 0 }); $('#g-n').value = ''; $('#g-a').value = ''; await saveProfile(); render(); toast('Meta criada ✓'); };
+$('#d-add').onclick = async () => { const n = $('#d-n').value.trim(), v = num($('#d-v').value); if (!n || v <= 0) return toast('Informe o nome e o valor'); const x = findBy(devs(), n); if (x) x.total += v; else devs().push({ id: mkid(), nome: n.slice(0, 40), total: v, pago: 0 }); $('#d-n').value = ''; $('#d-v').value = ''; await saveProfile(); render(); toast('Adicionado ✓'); };
+{ const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (SR) { const b = h('button', 's', '🎤'); b.title = 'Falar'; b.onclick = () => { const r = new SR(); r.lang = 'pt-BR'; r.onresult = e => { $('#inp').value = e.results[0][0].transcript; send(); }; r.onerror = () => toast('Não consegui ouvir, tente de novo'); r.start(); toast('Pode falar…'); }; $('#send').before(b); } }
 $('#an').onclick = analisar; $('#ai-fill').onclick = fillAI; $('#ai-add').onclick = lancarIA; ring(0); $('#p-pv').onchange = pvHint;
 $('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = $('#p-pv').value + ':' + $('#p-m').value.trim(); saveAI(); $('#ai-res').textContent = 'Testando…'; try { const j = await ai('Responda SÓ JSON: {"ok":true}'); $('#ai-res').textContent = j.ok ? 'IA funcionando ✓ com ' + PROV[pm().prov].n + ' (toque em Salvar plano para guardar)' : 'Resposta inesperada da IA.'; } catch (e) { $('#ai-res').textContent = 'Erro: ' + (e.message || e); } };
-[['💸 Gastei…', 'gastei '], ['🏦 Guardei…', 'guardei '], ['💰 Recebi…', 'recebi ']].forEach(([l, v]) => { const b = h('button', '', l); b.onclick = () => { $('#inp').value = v; $('#inp').focus(); }; $('#chips').appendChild(b); });
-['Quanto gastei hoje?', 'Resumo do mês', 'Posso gastar 80 hoje?', 'Onde posso economizar?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
+[['💸 Gastei…', 'gastei '], ['🏦 Guardei…', 'guardei '], ['💰 Recebi…', 'recebi '], ['🎯 Nova meta…', 'quero juntar '], ['🤝 Alguém me deve…', 'ficou me devendo ']].forEach(([l, v]) => { const b = h('button', '', l); b.onclick = () => { $('#inp').value = v; $('#inp').focus(); }; $('#chips').appendChild(b); });
+['Quanto gastei hoje?', 'Resumo do mês', 'Quais são meus compromissos dos próximos meses?', 'Quem me deve?', 'Onde posso economizar?', 'Posso gastar 80 hoje?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button', '', '📈 Analisar minhas finanças'); b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });

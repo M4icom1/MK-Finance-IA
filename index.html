@@ -53,12 +53,13 @@ button.s{background:var(--c2);color:var(--mut);padding:6px 12px;font-weight:500}
 .chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{background:var(--c2);color:var(--fg);font-weight:400;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--bd)}
 #toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:#1a2540;padding:10px 18px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;font-size:14px;z-index:9;border:1px solid var(--bd)}#toast.on{opacity:1;transform:translate(-50%,0)}
 .fx{position:fixed;bottom:25%;font-size:24px;pointer-events:none;animation:fl 1.6s ease-out forwards;z-index:9}@keyframes fl{to{transform:translateY(-240px) rotate(20deg);opacity:0}}
+.gl{padding:11px 0;border-bottom:1px solid var(--bd)}.gl:last-child{border:0}.gl .top{display:flex;justify-content:space-between;gap:8px;align-items:center}.gl .tr{height:9px;background:var(--c2);border-radius:5px;margin:8px 0;overflow:hidden}.gl .tr i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#3b7bff,#4dd4ff);transition:width .9s cubic-bezier(.2,.8,.2,1)}.gl .r{margin-top:6px}
 #login{max-width:380px;margin:9vh auto;padding:12px}.cv{width:100%;border-radius:16px;display:block;margin-bottom:12px}#login input{margin-bottom:8px}.hint{color:var(--mut);font-size:13px}
 </style></head><body>
 <div id="login" hidden><img class="cv" src="cover.svg" alt="MK Finance IA"><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" class="full">Entrar</button><p class="hint" id="err"></p></div>
 <div id="app" hidden>
 <aside class="side"><div class="brand"><div class="logo">MK</div><div class="bn"><b>MK Finance <i>IA</i></b><small id="hi"></small></div></div>
-<nav id="nav"><button data-t="ai" class="on"><span>💬</span><em>Assistente</em></button><button data-t="home"><span>📊</span><em>Painel</em></button><button data-t="tx"><span>🧾</span><em>Lançamentos</em></button><button data-t="plan"><span>🎯</span><em>Plano</em></button></nav>
+<nav id="nav"><button data-t="ai" class="on"><span>💬</span><em>Assistente</em></button><button data-t="home"><span>📊</span><em>Painel</em></button><button data-t="tx"><span>🧾</span><em>Lançamentos</em></button><button data-t="goals"><span>💎</span><em>Metas e dívidas</em></button><button data-t="plan"><span>🎯</span><em>Plano</em></button></nav>
 <div class="sf"><button id="out"><span>🚪</span><em>Sair</em></button></div></aside>
 <main class="main">
 <header class="ph"><div><h1 id="pt"></h1><div class="l" id="ps"></div></div><div class="mb" id="mbar"><button class="s" id="mp">◀</button><span id="ml"></span><button class="s" id="mn">▶</button></div></header>
@@ -92,6 +93,11 @@ button.s{background:var(--c2);color:var(--mut);padding:6px 12px;font-weight:500}
 <div class="c"><div class="r"><input id="q" placeholder="Buscar lançamentos…"><button class="s" id="csv">CSV</button></div><div id="list"></div></div>
 </section>
 
+<section id="t-goals" hidden>
+<div class="c"><div class="ttl">💎 Metas</div><div id="gm"></div><div class="r2"><input id="g-n" placeholder="Nome da meta (ex.: notebook)"><input id="g-a" inputmode="decimal" placeholder="Valor alvo (R$)"></div><div class="r2"><input id="g-p" type="month"><button id="g-add">Criar meta</button></div></div>
+<div class="c"><div class="ttl">🤝 Quem te deve</div><div class="l" id="dv-t"></div><div id="dv"></div><div class="r2"><input id="d-n" placeholder="Nome"><input id="d-v" inputmode="decimal" placeholder="Valor que deve (R$)"></div><button class="full" id="d-add">Adicionar</button></div>
+</section>
+
 <section id="t-plan" hidden>
 <div class="c"><div class="ttl">✨ Preencher com IA</div><textarea id="ai-p" placeholder="Ex.: Me chamo Ana, ganho 2.500 por mês, trabalho 4 horas por dia de manhã, estudo à tarde 4 horas, tenho 8 mil guardados. Fatura de dezembro 400. Quero gastar no máximo 600 no mercado."></textarea><button id="ai-fill" class="full">Preencher meu plano</button><div class="hint" style="margin-top:6px">A IA preenche os campos abaixo. Confira e toque em Salvar plano.</div></div>
 <div class="c"><div class="ttl">👤 Perfil</div><div class="r2"><input id="p-n" placeholder="Seu nome"></div><div class="r2"><input id="p-r" inputmode="decimal" placeholder="Renda mensal (R$)"><input id="p-s" inputmode="decimal" placeholder="Reserva inicial (R$)"></div></div>
@@ -108,5 +114,5 @@ button.s{background:var(--c2);color:var(--mut);padding:6px 12px;font-weight:500}
 </section>
 </main><div id="toast"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=8"></script><script src="app.js?v=8"></script>
+<script src="config.js?v=9"></script><script src="app.js?v=9"></script>
 </body></html>
