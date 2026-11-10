@@ -5,7 +5,7 @@
 <style>
 :root{--bg:#030610;--card:rgba(13,21,40,.76);--c2:#121b30;--bd:#1d2a47;--fg:#eaf0ff;--mut:#8394b8;--ac:#4d8dff;--pos:#4dd4ff;--bad:#ff6b81;--warn:#ffb454;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{overflow-x:hidden}
+html{overflow-x:hidden}body{overflow-x:clip}
 body{margin:0;background:radial-gradient(900px 520px at 92% -10%,#0d2c66,transparent 60%),radial-gradient(700px 420px at -10% 110%,#08265a88,transparent 60%),var(--bg);background-attachment:fixed;color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
 .ic{width:1.2em;height:1.2em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-.22em}
@@ -65,20 +65,42 @@ button.s{background:var(--c2);color:var(--mut);min-height:36px;padding:0 12px;fo
 .fx{position:fixed;bottom:25%;width:26px;height:26px;pointer-events:none;color:var(--ac);animation:fl 1.7s ease-out forwards;z-index:9}.fx .ic{width:100%;height:100%}@keyframes fl{to{transform:translateY(-240px) rotate(25deg);opacity:0}}
 #login{max-width:400px;margin:8vh auto;padding:14px}.cv{width:100%;border-radius:18px;display:block;margin-bottom:14px}#login input{margin-bottom:8px}.hint{color:var(--mut);font-size:13px}
 @media(max-width:600px){.ph h1{font-size:22px}.mb span{min-width:100px}.hero{flex-direction:column;align-items:stretch;text-align:left}.sc{align-self:center}.v{font-size:20px}.big .v{font-size:28px}.dw{width:150px;height:150px}.m{max-width:94%}#chat{height:min(58vh,520px)}}
+*{scrollbar-width:thin;scrollbar-color:#26365f transparent}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.me,.kb{display:none}
+@media(min-width:900px){
+.main{max-width:1280px;padding-top:0}
+.ph{position:sticky;top:0;z-index:4;margin:0 -32px 20px;padding:24px 32px 14px;background:linear-gradient(rgba(3,6,16,.94),rgba(3,6,16,.8));backdrop-filter:blur(14px)}.ph h1{font-size:30px}
+.c{padding:20px;border-radius:20px}.v{font-size:26px}.big .v{font-size:40px}.g3 .v{font-size:19px}
+.me{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:var(--c2);margin-bottom:8px}
+.av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2f6bff,#38bdf8);display:grid;place-items:center;font-weight:700;color:#fff;flex:none}
+.mt{min-width:0}.mt b{display:block;font-size:14px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mt small{color:var(--mut);font-size:12px}
+.kb{display:block;font-size:11px;color:var(--mut);padding:0 6px 10px;line-height:1.4}
+#login{max-width:1040px;display:grid;grid-template-columns:1.25fr 1fr;gap:40px;align-items:center;margin-top:11vh}#login .cv{margin:0}#login .lf h2{margin:0 0 4px;font-size:26px}
+#t-ai{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr);gap:14px;align-items:start}
+#t-ai>.c{margin:0}#t-ai>.hero2{grid-column:1/-1}#t-ai>.chatc{grid-column:1;grid-row:2/span 3;position:sticky;top:104px}#t-ai>.g3{grid-column:2;grid-row:2;padding:0;background:none;border:0}#t-ai>.sidec{grid-column:2;grid-row:3}
+#chat{height:calc(100vh - 340px);min-height:320px;max-height:none}.m{max-width:78%}
+#t-home:not([hidden]){display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:start}
+#t-home>*{grid-column:span 12;margin:0;min-width:0}#t-home>.w5{grid-column:span 5}#t-home>.w7{grid-column:span 7}#t-home>.w6{grid-column:span 6}#ins:empty{display:none}
+.g{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.big{grid-column:span 2}#ln svg{max-height:300px}
+#t-tx:not([hidden]){display:grid;grid-template-columns:minmax(320px,1fr) minmax(0,1.5fr);gap:14px;align-items:start}#t-tx>.c{margin:0}#t-tx>.c:nth-child(3){grid-column:2;grid-row:1/span 2}
+#t-goals:not([hidden]),#t-plan:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}#t-goals>.c,#t-plan>.c{margin:0}#t-plan>#p-save{grid-column:1/-1;margin:0}
+}
+@media(min-width:1500px){.main{max-width:1440px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.draw{stroke-dashoffset:0}.ar{opacity:1}}
 </style></head><body>
-<div id="login" hidden><img class="cv" src="cover.svg" alt="MK Finance IA"><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" class="full">Entrar</button><p class="hint" id="err"></p></div>
+<div id="login" hidden><img class="cv" src="cover.svg" alt="MK Finance IA"><div class="lf"><h2>Bem-vindo de volta</h2><p class="hint" style="margin:0 0 12px">Entre para acessar as suas finanças.</p><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" class="full">Entrar</button><p class="hint" id="err"></p></div></div>
 <div id="app" hidden>
 <aside class="side"><div class="brand"><img class="logo" src="logo.svg" alt=""><div class="bn"><b>MK Finance <i>IA</i></b><small id="hi"></small></div></div>
 <nav id="nav"><button data-t="ai" class="on" title="Assistente"><i data-ic="chat"></i><em>Assistente</em></button><button data-t="home" title="Painel"><i data-ic="chart"></i><em>Painel</em></button><button data-t="tx" title="Lançamentos"><i data-ic="receipt"></i><em>Lançamentos</em></button><button data-t="goals" title="Metas e dívidas"><i data-ic="gem"></i><em>Metas e dívidas</em></button><button data-t="plan" title="Plano"><i data-ic="sliders"></i><em>Plano</em></button></nav>
-<div class="sf"><button id="out" title="Sair"><i data-ic="logout"></i><em>Sair</em></button></div></aside>
+<div class="sf"><div class="me"><span class="av" id="av"></span><div class="mt"><b id="mnm"></b><small>Plano pessoal</small></div></div><div class="kb">Atalhos: teclas 1 a 5 trocam de aba e / abre o chat.</div><button id="out" title="Sair"><i data-ic="logout"></i><em>Sair</em></button></div></aside>
 <main class="main">
 <header class="ph"><div><h1 id="pt"></h1><div class="l" id="ps"></div></div><div class="mb" id="mbar"><button class="s" id="mp" aria-label="Mês anterior"><i data-ic="left"></i></button><span id="ml"></span><button class="s" id="mn" aria-label="Próximo mês"><i data-ic="right"></i></button></div></header>
 
 <section id="t-ai">
 <div class="c hero2"><div><h2 id="hl"></h2><div class="l" id="hs"></div></div><div class="tipd" id="tip-d"></div></div>
 <div class="g3"><div class="c"><div class="l">Saldo do mês</div><div class="v" id="a-s">–</div></div><div class="c"><div class="l">Gastos</div><div class="v neg" id="a-g">–</div></div><div class="c"><div class="l">Reserva</div><div class="v pos" id="a-r">–</div></div></div>
-<div class="c"><div class="ttl"><i data-ic="doc"></i>Agora mesmo</div><div id="story-s"></div></div>
+<div class="c sidec"><div class="ttl"><i data-ic="doc"></i>Agora mesmo</div><div id="story-s"></div></div>
 <div class="c chatc"><div class="chips" id="chips"></div><div id="chat"></div><div class="r"><input id="inp" placeholder="Ex.: gastei 150 no mercado" autocomplete="off" enterkeyhint="send"><button id="send" aria-label="Enviar"><i data-ic="send"></i></button></div></div>
 </section>
 
@@ -89,12 +111,12 @@ button.s{background:var(--c2);color:var(--mut);min-height:36px;padding:0 12px;fo
 <div class="c"><div class="l">Gastos</div><div class="v neg" id="v-g">–</div></div><div class="c"><div class="l">Entradas</div><div class="v pos" id="v-e">–</div></div>
 <div class="c"><div class="l">Fatura do cartão</div><div class="v" id="v-f">–</div></div><div class="c"><div class="l">Reserva cobre</div><div class="v" id="v-r">–</div></div>
 <div class="c"><div class="l">Taxa de poupança</div><div class="v" id="v-p">–</div></div><div class="c"><div class="l">Horas de trabalho gastas</div><div class="v" id="v-h">–</div></div></div>
-<div class="c"><div class="ttl"><i data-ic="doc"></i>O que está acontecendo</div><div id="story"></div></div>
-<div class="c"><div class="ttl"><i data-ic="trendup"></i>Gastos × entradas (6 meses)</div><div class="l" id="ln-r"></div><div id="ln"></div></div>
+<div class="c w5"><div class="ttl"><i data-ic="doc"></i>O que está acontecendo</div><div id="story"></div></div>
+<div class="c w7"><div class="ttl"><i data-ic="trendup"></i>Gastos × entradas (6 meses)</div><div class="l" id="ln-r"></div><div id="ln"></div></div>
 <div class="cols"><div class="c"><div class="ttl"><i data-ic="pie"></i>Para onde foi o dinheiro</div><div class="dn"><div class="dw"><svg id="donut" viewBox="0 0 42 42"></svg><div class="ct"><div class="l" id="dc-l"></div><div class="v" id="dc-v"></div></div></div><div id="leg"></div></div></div>
 <div class="c"><div class="ttl"><i data-ic="calendar"></i>Gasto por dia</div><div class="l" id="dy-r">Toque numa barra para ver o valor.</div><div class="dy" id="dy"></div></div></div>
-<div class="c"><div class="ttl"><i data-ic="sliders"></i>Limites por categoria</div><div id="bud"></div></div>
-<div class="c"><div class="ttl"><i data-ic="bulb"></i>Dicas para melhorar</div><div id="tips"></div></div>
+<div class="c w6"><div class="ttl"><i data-ic="sliders"></i>Limites por categoria</div><div id="bud"></div></div>
+<div class="c w6"><div class="ttl"><i data-ic="bulb"></i>Dicas para melhorar</div><div id="tips"></div></div>
 </section>
 
 <section id="t-tx" hidden>
@@ -118,12 +140,12 @@ button.s{background:var(--c2);color:var(--mut);min-height:36px;padding:0 12px;fo
 <div class="r2"><select id="x-t"><option value="">Turno de trabalho</option><option>manhã</option><option>tarde</option><option>noite</option><option>integral</option><option>variável</option></select><input id="x-e" inputmode="decimal" placeholder="Horas de estudo por dia"></div>
 <div class="r2"><select id="x-et"><option value="">Turno de estudo</option><option>manhã</option><option>tarde</option><option>noite</option><option>EAD</option><option>não estudo</option></select></div>
 <div class="l" id="vh" style="margin-top:8px"></div></div>
-<div class="c"><div class="ttl"><i data-ic="key"></i>Inteligência artificial</div><div class="r2"><select id="p-pv"><option value="gemini">Gemini (Google)</option><option value="groq">Groq</option><option value="openrouter">OpenRouter</option><option value="openai">OpenAI</option><option value="anthropic">Claude (Anthropic)</option></select></div><div class="r2"><input id="p-k" type="password" autocomplete="off" placeholder="Cole a chave (API key) do provedor"></div><div class="r2"><input id="p-m" placeholder="Modelo (deixe vazio para o padrão)"></div><button class="s" id="ai-test" style="margin-top:8px">Testar IA</button><div class="hint" id="ai-res" style="margin-top:6px">Depois do teste, toque em Salvar plano. A chave fica guardada só na sua conta.</div><div class="hint" id="pv-h" style="margin-top:6px"></div></div>
+<div class="c"><div class="ttl"><i data-ic="key"></i>Inteligência artificial</div><div class="r2"><select id="p-pv"><option value="gemini">Gemini (Google)</option><option value="groq">Groq</option><option value="openrouter">OpenRouter</option><option value="openai">OpenAI</option><option value="anthropic">Claude (Anthropic)</option></select></div><div class="r2"><input id="p-k" type="password" autocomplete="off" placeholder="Cole a chave (deixe vazio para usar a chave padrão do app)"></div><div class="r2"><input id="p-m" placeholder="Modelo (deixe vazio para o padrão)"></div><button class="s" id="ai-test" style="margin-top:8px">Testar IA</button><div class="hint" id="ai-res" style="margin-top:6px">Depois do teste, toque em Salvar plano. A chave fica guardada só na sua conta.</div><div class="hint" id="pv-h" style="margin-top:6px"></div></div>
 <div class="c"><div class="ttl"><i data-ic="card"></i>Faturas do cartão por mês</div><div id="fat"></div><button class="s" id="fat-add" style="margin-top:8px"><i data-ic="plus"></i>Adicionar mês</button></div>
 <div class="c"><div class="ttl"><i data-ic="sliders"></i>Limite mensal por categoria</div><div class="hint">Vazio = sem limite.</div><div id="lim"></div></div>
 <button class="full" id="p-save">Salvar plano</button>
 </section>
 </main><div id="toast"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=10"></script><script src="app.js?v=10"></script>
+<script src="config.js?v=11"></script><script src="app.js?v=11"></script>
 </body></html>

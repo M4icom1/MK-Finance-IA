@@ -121,7 +121,7 @@ async function add(items, dia) { if (!items.length) return; const { data, error 
 /* ---------- renderização ---------- */
 function render() {
   const nome = P.nome || (ses ? ses.user.email.split('@')[0] : ''), hr = new Date().getHours();
-  $('#hi').textContent = nome; $('#ml').textContent = mlabel(vm);
+  $('#hi').textContent = nome; $('#av').textContent = nome.slice(0, 1).toUpperCase(); $('#mnm').textContent = nome; $('#ml').textContent = mlabel(vm);
   $('#hl').textContent = (hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + nome + '!';
   $('#hs').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const T = tips(); $('#tip-d').innerHTML = ''; $('#tip-d').append(lab('bulb', 'Dica do dia'), document.createTextNode(T[0]));
@@ -365,5 +365,6 @@ $('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = 
 [['Gastei…', 'gastei ', 'minus'], ['Guardei…', 'guardei ', 'bank'], ['Recebi…', 'recebi ', 'wallet'], ['Nova meta…', 'quero juntar ', 'flag'], ['Alguém me deve…', 'ficou me devendo ', 'users']].forEach(([l, v, ico]) => { const b = h('button'); b.innerHTML = IC(ico) + l; b.onclick = () => { $('#inp').value = v; $('#inp').focus(); }; $('#chips').appendChild(b); });
 ['Quanto gastei hoje?', 'Resumo do mês', 'Quais são meus compromissos dos próximos meses?', 'Quem me deve?', 'Onde posso economizar?', 'Posso gastar 80 hoje?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button'); b.innerHTML = IC('trendup') + 'Analisar minhas finanças'; b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
+document.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || $('#app').hidden || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; const map = { 1: 'ai', 2: 'home', 3: 'tx', 4: 'goals', 5: 'plan' }; if (map[e.key]) go(map[e.key]); else if (e.key === '/') { e.preventDefault(); go('ai'); $('#inp').focus(); } });
 hydrate();
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });
