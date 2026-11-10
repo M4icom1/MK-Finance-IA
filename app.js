@@ -20,7 +20,7 @@ const ICONS = { chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 2
   trendup: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>', trenddown: '<path d="M3 7l6 6 4-4 8 8M15 17h6v-6"/>', leaf: '<path d="M5 19c0-9 5-14 15-14 0 10-5 15-14 15"/><path d="M5 19c3-5 6-8 10-10"/>',
   scale: '<path d="M12 4v16M6 20h12M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>', pie: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
   download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.3 5 3.9 0 1.1-1.1 1.8-2.5 1.8-1.1 0-2-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>' };
-const IC = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || ICONS.box) + '</svg>';
+const IC = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || ICONS.box).replace(/<(path|circle|rect)\b/g, '<$1 pathLength="1"') + '</svg>';
 const lab = (n, t) => { const s = h('span', 'lab'); s.innerHTML = IC(n); s.appendChild(document.createTextNode(t)); return s; };
 const setBtn = (b, n, t) => { b.innerHTML = IC(n) + t; };
 const xbtn = () => { const b = h('button', 's'); b.innerHTML = IC('x'); b.title = 'Remover'; b.setAttribute('aria-label', 'Remover'); return b; };
@@ -44,10 +44,17 @@ const toast = t => { const e = $('#toast'); e.textContent = t; e.classList.add('
 const cnt = (el, v) => { const a = +el.dataset.v || 0, t0 = performance.now(); el.dataset.v = v; const f = t => { const k = Math.min(1, (t - t0) / 600); el.textContent = R(a + (v - a) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
 const celebrate = k => { for (let i = 0; i < 10; i++) { const s = h('span', 'fx'); s.innerHTML = IC(k); s.style.left = (30 + Math.random() * 55) + '%'; s.style.animationDelay = Math.random() * .4 + 's'; document.body.appendChild(s); setTimeout(() => s.remove(), 2100); } };
 const inM = (x, m) => x.dia.slice(0, 7) === m;
-const sum = (m, t) => tx.filter(x => inM(x, m) && x.tipo === t).reduce((a, x) => a + +x.valor, 0);
-const catsOf = m => { const o = {}; tx.filter(x => inM(x, m) && x.tipo === 'gasto').forEach(x => o[x.categoria] = Math.round((o[x.categoria] || 0) + +x.valor)); return o; };
+const sumRaw = (m, t) => tx.filter(x => inM(x, m) && x.tipo === t).reduce((a, x) => a + +x.valor, 0);
+const fatLanc = m => tx.filter(x => inM(x, m) && x.tipo === 'gasto' && x.categoria === 'Fatura do cartão').reduce((a, x) => a + +x.valor, 0);
+const faturaEf = m => Math.max(+P.faturas[m] || 0, fatLanc(m));
+const gastoLanc = m => sumRaw(m, 'gasto') - fatLanc(m);
+const primeiroMes = () => tx.reduce((mn, x) => x.dia.slice(0, 7) < mn ? x.dia.slice(0, 7) : mn, hoje().slice(0, 7));
+const entradaMes = m => { const l = sumRaw(m, 'entrada'); return P.renda > 0 && m >= primeiroMes() ? Math.max(l, P.renda) : l; };
+const sum = (m, t) => t === 'gasto' ? gastoLanc(m) + faturaEf(m) : t === 'entrada' ? entradaMes(m) : sumRaw(m, t);
+const r2 = n => Math.round(n * 100) / 100, r2o = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, r2(v)]));
+const catsOf = m => { const o = {}; tx.filter(x => inM(x, m) && x.tipo === 'gasto' && x.categoria !== 'Fatura do cartão').forEach(x => o[x.categoria] = (o[x.categoria] || 0) + +x.valor); const f = faturaEf(m); if (f > 0) o['Fatura do cartão'] = f; return o; };
 const reservaTotal = () => P.reserva + tx.filter(x => x.tipo === 'guardado').reduce((t, x) => t + +x.valor, 0) - tx.filter(x => x.tipo === 'resgate').reduce((t, x) => t + +x.valor, 0);
-const avgG = () => { const all = tx.filter(x => x.tipo === 'gasto'), n = new Set(all.map(x => x.dia.slice(0, 7))).size; return n ? all.reduce((a, x) => a + +x.valor, 0) / n : 0; };
+const avgG = () => { const cur = hoje().slice(0, 7), all = new Set([...tx.filter(x => x.tipo === 'gasto').map(x => x.dia.slice(0, 7)), ...Object.keys(P.faturas)].filter(m => m <= cur)), done = [...all].filter(m => m < cur), ms = done.length ? done : [...all]; return ms.length ? ms.reduce((t, m) => t + sum(m, 'gasto'), 0) / ms.length : 0; };
 const vHora = () => { const e = P.ex || {}, hh = +e.hTrab, d = +e.dSem || 5; return P.renda > 0 && hh > 0 ? P.renda / (hh * d * 4.345) : 0; };
 const norm = i => { const t = ['entrada', 'guardado', 'resgate'].includes(i.tipo) ? i.tipo : 'gasto'; return { tipo: t, valor: +i.valor, categoria: t === 'entrada' ? 'Entrada' : t === 'gasto' ? (GC.includes(i.categoria) ? i.categoria : 'Outros') : 'Reserva', descricao: String(i.descricao || '').slice(0, 80), ...(/^\d{4}-\d{2}-\d{2}$/.test(i.data) ? { dia: i.data } : /^\d{4}-\d{2}$/.test(i.data) ? { dia: i.data + '-01' } : {}), ...(+i.parcelas > 1 ? { parcelas: Math.round(+i.parcelas) } : {}), ...(+i.repetir > 1 ? { repetir: Math.round(+i.repetir) } : {}) }; };
 const nz = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -56,9 +63,9 @@ const metas = () => (P.ex.metas = P.ex.metas || []), devs = () => (P.ex.dev = P.
 const devTotal = () => devs().reduce((t, d) => t + Math.max(0, d.total - d.pago), 0);
 const findBy = (arr, nome) => { const q = nz(nome).trim(); return q ? arr.find(x => nz(x.nome) === q) || arr.find(x => nz(x.nome).includes(q) || q.includes(nz(x.nome))) : null; };
 const expand = list => list.flatMap(i => { const { parcelas, repetir, ...r } = i, n = Math.min(36, parcelas || repetir || 1); if (n < 2) return [r]; const d0 = r.dia || hoje(); return Array.from({ length: n }, (_, k) => { const m = shift(d0.slice(0, 7), k); return { ...r, dia: m + '-' + pad(Math.min(+d0.slice(8), dim(m))), descricao: parcelas ? ((r.descricao || r.categoria) + ' (' + (k + 1) + '/' + n + ')').slice(0, 80) : r.descricao }; }); });
-const K = [['Mercado', /mercado|supermercado|feira|açougue/], ['Alimentação', /lanche|almo[cç]o|jantar|ifood|restaurante|pizza|café|padaria|comida/], ['Transporte', /uber|[oô]nibus|gasolina|passagem|combust/],
+const K = [['Fatura do cartão', /fatura|cart[aã]o|nubank|cr[eé]dito|parcel/], ['Mercado', /mercado|supermercado|feira|açougue/], ['Alimentação', /lanche|almo[cç]o|jantar|ifood|restaurante|pizza|café|padaria|comida/], ['Transporte', /uber|[oô]nibus|gasolina|passagem|combust/],
   ['Faculdade', /faculdade|livro|xerox|apostila|curso|mensalidade/], ['Lazer', /cinema|jogo|netflix|spotify|festa|rol[eê]/], ['Saúde', /farm[aá]cia|rem[eé]dio|m[eé]dico|dentista/],
-  ['Fatura do cartão', /fatura|cart[aã]o|nubank/], ['Empréstimo a amigos', /emprestei|emprestou/]];
+  ['Empréstimo a amigos', /emprestei|emprestou/]];
 function parse(t) {
   const s = t.toLowerCase(), m = s.match(/\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?/);
   if (!m || /\?|quanto|posso|qual |como /.test(s)) return null;
@@ -72,25 +79,26 @@ function parse(t) {
 
 /* ---------- narrativa e dicas (sem IA) ---------- */
 function story() {
-  const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), pm = shift(vm, -1), pg = sum(pm, 'gasto'), by = catsOf(vm), cur = vm === hoje().slice(0, 7), f = P.faturas[vm], o = [];
+  const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), pm = shift(vm, -1), pg = sum(pm, 'gasto'), by = catsOf(vm), cur = vm === hoje().slice(0, 7), f = faturaEf(vm), o = [];
   const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0];
-  if (!g && !e) return [{ i: 'sparkle', k: 'info', t: 'Ainda não há lançamentos em ' + mlabel(vm) + '. Conte seus gastos no Assistente e eu monto o retrato do mês.' }];
+  if (!g && !tx.some(x => inM(x, vm))) return [{ i: 'sparkle', k: 'info', t: 'Ainda não há lançamentos em ' + mlabel(vm) + '. Conte seus gastos no Assistente e eu monto o retrato do mês.' }];
   if (g) { const pc = pg ? Math.round((g - pg) / pg * 100) : null; o.push({ i: pc != null && pc > 0 ? 'trendup' : 'trenddown', k: pc != null && pc > 10 ? 'warn' : 'good', t: 'Em ' + mname(vm) + ' você gastou ' + R(g) + (pc != null ? ', ' + Math.abs(pc) + '% ' + (pc >= 0 ? 'a mais' : 'a menos') + ' que em ' + mname(pm) + '.' : '.') }); }
   if (top) o.push({ i: ci(top[0])[0], k: 'info', t: 'Sua maior categoria é ' + top[0] + ': ' + R(top[1]) + ' (' + Math.round(top[1] / g * 100) + '% dos gastos).' });
   if (cur && g) { const d = +hoje().slice(8), pd = g / d; o.push({ i: 'calendar', k: 'info', t: 'Você gasta em média ' + R(pd) + ' por dia. Nesse ritmo, o mês fecha em cerca de ' + R(pd * dim(vm)) + '.' }); }
   if (e > 0) { const p = Math.round((e - g) / e * 100); o.push({ i: p >= 20 ? 'leaf' : p >= 0 ? 'scale' : 'octagon', k: p >= 20 ? 'good' : p >= 0 ? 'warn' : 'bad', t: p >= 0 ? 'Sobrou ' + p + '% das suas entradas do mês.' : 'Você gastou ' + Math.abs(p) + '% a mais do que entrou neste mês.' }); }
+  if (P.renda > 0 && vm >= primeiroMes() && sumRaw(vm, 'entrada') < P.renda) o.push({ i: 'wallet', k: 'info', t: 'Para as entradas deste mês, considerei a sua renda mensal de ' + R(P.renda) + ', já que você registrou menos que isso.' });
   if (f && P.renda > 0) o.push({ i: 'card', k: f / P.renda > .5 ? 'warn' : 'info', t: 'A fatura do cartão deste mês é ' + R(f) + ', cerca de ' + Math.round(f / P.renda * 100) + '% da sua renda.' });
   const rt = reservaTotal(), av = avgG(); if (rt > 0 && av > 0) { const mm = rt / av; o.push({ i: 'bank', k: mm >= 6 ? 'good' : mm >= 3 ? 'info' : 'warn', t: 'Sua reserva de ' + R(rt) + ' cobre cerca de ' + mm.toFixed(1).replace('.', ',') + ' meses no seu ritmo de gastos.' }); }
   Object.keys(P.limites).forEach(k => { const u = by[k] || 0, l = +P.limites[k]; if (l > 0 && u > l) o.push({ i: 'octagon', k: 'bad', t: 'Você passou do limite em ' + k + ': ' + R(u) + ' de ' + R(l) + '.' }); else if (l > 0 && u > l * .8) o.push({ i: 'alert', k: 'warn', t: k + ' já usou ' + Math.round(u / l * 100) + '% do limite do mês.' }); });
   const vh = vHora(); if (vh && g) o.push({ i: 'clock', k: 'info', t: 'Seus gastos de ' + mname(vm) + ' equivalem a cerca de ' + (g / vh).toFixed(1).replace('.', ',') + ' horas de trabalho. Seu tempo vale ~' + R(vh) + ' por hora.' });
-  if (devTotal() > 0) o.push({ i: 'users', k: 'info', t: 'Seus amigos ainda te devem ' + R(devTotal()) + ' no total. Veja os detalhes na aba Metas.' });
+  if (devTotal() > 0) o.push({ i: 'users', k: 'info', t: 'Seus amigos ainda te devem ' + R(devTotal()) + ' no total. Se pagarem, o custo líquido do cartão cai nesse valor (detalhes na aba Metas).' });
   metas().filter(m => m.alvo > 0).forEach(m => o.push({ i: 'gem', k: m.atual >= m.alvo ? 'good' : 'info', t: 'Meta ' + m.nome + ': ' + Math.round(Math.min(100, m.atual / m.alvo * 100)) + '% concluída (' + R(m.atual) + ' de ' + R(m.alvo) + ').' }));
   return o;
 }
 const GEN = ['Pague a fatura do cartão sempre integral para fugir dos juros do rotativo.', 'Espere 24 horas antes de qualquer compra que não estava planejada.', 'Revise assinaturas e débitos automáticos uma vez por mês.', 'Registre o gasto no mesmo dia: leva 5 segundos e evita esquecimentos.',
   'Quem usa o seu cartão deve repassar o valor antes do vencimento. Combine uma data fixa.', 'Guardar pouco todo mês vale mais do que guardar muito de vez em quando. O hábito é o que conta.', 'Compare preços dos itens que você compra todo mês, como mercado e transporte.', 'Regra 50/30/20: metade para necessidades, 30% para desejos e 20% para guardar. Adapte à sua realidade.'];
 function tips() {
-  const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), by = catsOf(vm), L = [], rt = reservaTotal(), av = avgG(), nx = P.faturas[shift(hoje().slice(0, 7), 1)];
+  const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), by = catsOf(vm), L = [], rt = reservaTotal(), av = avgG(), nx = faturaEf(shift(hoje().slice(0, 7), 1));
   if (e > 0 && (e - g) / e < .1) L.push('Separe 10% de toda entrada assim que ela cair, antes de gastar. Guardar primeiro e gastar o resto funciona melhor do que tentar guardar a sobra.');
   if (g && (by['Alimentação'] || 0) / g > .25) L.push('Alimentação está pesando nos seus gastos. Planejar as refeições da semana e levar marmita alguns dias costuma cortar bastante.');
   if (g && (by['Lazer'] || 0) / g > .2) L.push('O lazer passou de 20% dos seus gastos. Definir um dia fixo para sair ajuda a manter o controle sem abrir mão da diversão.');
@@ -131,9 +139,9 @@ function render() {
   stats(); lineChart(); donut(); daily(); budgets(); list(); goalsView();
 }
 function stats() {
-  const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), f = P.faturas[vm], all = tx.filter(x => x.tipo === 'gasto'), tot = all.reduce((a, x) => a + +x.valor, 0), ms = new Set(all.map(x => x.dia.slice(0, 7))).size;
+  const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), f = faturaEf(vm), av = avgG();
   cnt($('#v-saldo'), e - g); $('#v-saldo').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); cnt($('#v-g'), g); cnt($('#v-e'), e);
-  $('#v-f').textContent = f ? R(f) : '–'; $('#v-r').textContent = reservaTotal() > 0 && tot ? (reservaTotal() / (tot / ms)).toFixed(1).replace('.', ',') + ' meses' : '–';
+  $('#v-f').textContent = f ? R(f) : '–'; $('#v-r').textContent = reservaTotal() > 0 && av ? (reservaTotal() / av).toFixed(1).replace('.', ',') + ' meses' : '–';
   $('#v-p').textContent = e > 0 ? Math.round((e - g) / e * 100) + '%' : '–'; $('#v-h').textContent = vHora() && g ? (g / vHora()).toFixed(1).replace('.', ',') + ' h' : '–';
   $('#a-s').textContent = R(e - g); $('#a-s').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); $('#a-g').textContent = R(g); $('#a-r').textContent = R(reservaTotal());
 }
@@ -165,7 +173,7 @@ function donut() {
 function daily() {
   const n = dim(vm), D = Array(n).fill(0); tx.filter(x => inM(x, vm) && x.tipo === 'gasto').forEach(x => D[+x.dia.slice(8) - 1] += +x.valor);
   const mx = Math.max(1, ...D), el = $('#dy'), rd = $('#dy-r'), td = vm === hoje().slice(0, 7) ? +hoje().slice(8) : 0; el.innerHTML = '';
-  const top = D.indexOf(Math.max(...D)); rd.textContent = Math.max(...D) > 0 ? 'Dia mais caro: ' + (top + 1) + ' (' + R(D[top]) + '). Passe o mouse ou toque numa barra.' : 'Sem gastos neste mês.';
+  const top = D.indexOf(Math.max(...D)); rd.textContent = Math.max(...D) > 0 ? 'Dia mais caro: ' + (top + 1) + ' (' + R(D[top]) + '). Passe o mouse ou toque numa barra.' : 'Sem gastos lançados neste mês.'; if (faturaEf(vm) > fatLanc(vm)) rd.textContent += ' A fatura informada não tem dia e não aparece aqui.';
   D.forEach((v, i) => { const b = h('i', i + 1 === td ? 'td' : ''); b.title = 'Dia ' + (i + 1) + ': ' + R(v); setTimeout(() => b.style.height = Math.max(2, v / mx * 100) + '%', 30 + i * 12); b.onmouseenter = b.onclick = () => rd.textContent = 'Dia ' + (i + 1) + ': ' + R(v); el.appendChild(b); });
 }
 function budgets() {
@@ -191,7 +199,8 @@ function goalsView() {
 }
 function list() {
   const el = $('#list'); el.innerHTML = ''; const vh = vHora(), rows = tx.filter(x => inM(x, vm) && (x.descricao + ' ' + x.categoria).toLowerCase().includes(busca));
-  if (!rows.length) el.innerHTML = '<span class="hint">Nenhum lançamento neste mês.</span>';
+  if (!rows.length && !(+P.faturas[vm] > 0)) el.innerHTML = '<span class="hint">Nenhum lançamento neste mês.</span>';
+  { const fi = +P.faturas[vm] || 0; if (fi > 0 && !busca) { const r = h('div', 't'), ic = h('div', 'ic2'), t = h('div', 'tx'); ic.innerHTML = IC('card'); t.append(h('div', '', 'Fatura do cartão'), h('small', '', 'Informada no Plano e contada como gasto do mês' + (fatLanc(vm) > 0 ? ' · lançamentos da categoria somam ' + R(fatLanc(vm)) + ' (vale o maior valor)' : ''))); r.append(ic, t, h('b', '', R(fi))); el.appendChild(r); } }
   rows.forEach(x => { const r = h('div', 't'), ic = h('div', 'ic2'), t = h('div', 'tx'), v = h('b', x.tipo === 'gasto' ? '' : 'pos', ({ gasto: '−', entrada: '+' }[x.tipo] || '') + R(x.valor)), d = xbtn(); ic.innerHTML = IC(ci(x.categoria)[0]);
     t.append(h('div', '', x.descricao || x.categoria), h('small', '', x.dia.slice(8) + '/' + x.dia.slice(5, 7) + ' · ' + ({ guardado: 'Guardado na reserva', resgate: 'Resgate da reserva' }[x.tipo] || x.categoria) + (vh && x.tipo === 'gasto' ? ' · ≈ ' + (x.valor / vh).toFixed(1).replace('.', ',') + ' h de trabalho' : '')));
     d.onclick = async () => { await sb.from('transactions').delete().eq('id', x.id); toast('Removido'); load(); }; r.append(ic, t, v, d); el.appendChild(r); });
@@ -224,15 +233,15 @@ async function ai(p) {
 const rotina = () => { const e = P.ex || {}; return 'Rotina: ' + (e.ocup || 'não informada') + '; trabalha ' + (e.hTrab || '?') + 'h/dia, ' + (e.dSem || 5) + ' dias/semana, turno ' + (e.turno || '?') + '; estuda ' + (e.hEst || '?') + 'h/dia, turno ' + (e.eTurno || '?') + (vHora() ? '; valor da hora ≈ R$ ' + vHora().toFixed(2) : '') + '.'; };
 const HIST = [];
 function ctx() {
-  const hm = hoje().slice(0, 7), M = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos: Math.round(sum(m, 'gasto')), entradas: Math.round(sum(m, 'entrada')), guardado: Math.round(sum(m, 'guardado')), categorias: catsOf(m) }; });
-  const F = [1, 2, 3, 4, 5, 6].map(i => { const m = shift(hm, i); return { mes: m, gastosAgendados: Math.round(sum(m, 'gasto')), fatura: P.faturas[m] || 0 }; }).filter(x => x.gastosAgendados || x.fatura);
+  const hm = hoje().slice(0, 7), M = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos_incluem_fatura: r2(sum(m, 'gasto')), fatura_cartao: r2(faturaEf(m)), entradas_consideradas: r2(sum(m, 'entrada')), guardado: r2(sum(m, 'guardado')), categorias: r2o(catsOf(m)) }; });
+  const F = [1, 2, 3, 4, 5, 6].map(i => { const m = shift(hm, i); return { mes: m, gastosAgendados: r2(gastoLanc(m)), fatura: r2(faturaEf(m)) }; }).filter(x => x.gastosAgendados || x.fatura);
   const cur = tx.filter(x => inM(x, vm)).slice(0, 40).map(x => x.dia + ' ' + x.tipo + ' ' + x.valor + ' ' + x.categoria + ' ' + (x.descricao || '').slice(0, 40)).join('\n') || '(nenhum)';
-  return 'Hoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nPERFIL: ' + JSON.stringify({ nome: P.nome, renda: P.renda, reserva_total: Math.round(reservaTotal()), faturas_cartao: P.faturas, limites: P.limites, valor_hora: Math.round(vHora() * 100) / 100 }) + ' ' + rotina() +
+  return 'Hoje: ' + hoje() + '. Mês em análise: ' + vm + '.\nNOTA: os gastos de cada mês JÁ incluem a fatura do cartão (vale o maior valor entre a fatura informada e os lançamentos da categoria Fatura do cartão) e as entradas consideradas são o maior valor entre o registrado e a renda mensal.\nPERFIL: ' + JSON.stringify({ nome: P.nome, renda: P.renda, reserva_total: Math.round(reservaTotal()), faturas_cartao: P.faturas, limites: P.limites, valor_hora: Math.round(vHora() * 100) / 100 }) + ' ' + rotina() +
     '\nMETAS: ' + JSON.stringify(metas().map(m => ({ nome: m.nome, alvo: m.alvo, atual: m.atual, prazo: m.prazo }))) + '\nQUEM DEVE AO USUÁRIO: ' + JSON.stringify(devs().map(d => ({ nome: d.nome, total: d.total, pago: d.pago }))) +
     '\nÚLTIMOS 6 MESES: ' + JSON.stringify(M) + '\nPRÓXIMOS MESES (agendado): ' + JSON.stringify(F) + '\nLANÇAMENTOS DE ' + vm + ':\n' + cur;
 }
 const SCHEMA = 'Responda SÓ JSON (omita o que não se aplica): {"resposta":"texto","itens":[{"tipo":"gasto"|"entrada"|"guardado"|"resgate","valor":número,"categoria":"...","descricao":"curta","data":"AAAA-MM-DD","parcelas":número,"repetir":número}],"faturas":{"AAAA-MM":número},"limites":{"Categoria":número},"perfil":{"nome":"","renda":número,"reserva_total":número,"ocupacao":"","hTrab":número,"dSem":número,"turno":"","hEst":número,"eTurno":""},"metas":[{"nome":"","alvo":número,"prazo":"AAAA-MM","aporte":número}],"devedores":[{"nome":"","valor":número}],"recebimentos":[{"nome":"","valor":número}],"apagar":[{"busca":"","mes":"AAAA-MM"}],"editar":[{"busca":"","mes":"AAAA-MM","novo_valor":número,"nova_categoria":"","nova_data":"AAAA-MM-DD","nova_descricao":""}]}\n' +
-  'Regras: 1) "resposta" é obrigatória: confirme o que foi feito ou responda à pergunta usando só os dados fornecidos (faça as contas com cuidado; se faltar dado, diga). 2) "data" só se não for hoje; qualquer item em outro mês precisa de "data". 3) Compra parcelada: um item com "parcelas" e "valor" de CADA parcela, "data" da primeira. Conta fixa ou assinatura mensal: "repetir" com o número de meses. 4) O total da fatura do cartão de um mês vai em "faturas", nunca em itens; pagar a fatura é um gasto na categoria Fatura do cartão. 5) Quando alguém passa a dever ao usuário (ex.: usou o cartão dele), use "devedores"; quando essa pessoa paga, use "recebimentos". 6) Aporte em meta: use "metas" com "aporte" e inclua também um item "guardado". 7) "apagar" e "editar" só quando o usuário pedir explicitamente; o app pede confirmação. 8) Não invente valores nem itens e não recomende investimentos específicos.';
+  'Regras: 1) "resposta" é obrigatória: confirme o que foi feito ou responda à pergunta usando só os dados fornecidos (faça as contas com cuidado; se faltar dado, diga). 2) "data" só se não for hoje; qualquer item em outro mês precisa de "data". 3) Compra parcelada: um item com "parcelas" e "valor" de CADA parcela, "data" da primeira. Conta fixa ou assinatura mensal: "repetir" com o número de meses. 4) Tudo que vai na fatura do cartão (compras no cartão, parcelas, pagamento da fatura) usa a categoria "Fatura do cartão". O app conta, em cada mês, o MAIOR valor entre a fatura informada em "faturas" e a soma desses lançamentos, então nunca conta em dobro. O total da fatura de um mês vai em "faturas", sem repetir em itens. 5) Quando alguém passa a dever ao usuário (ex.: usou o cartão dele), use "devedores"; quando essa pessoa paga, use "recebimentos". 6) Aporte em meta: use "metas" com "aporte" e inclua também um item "guardado". 7) "apagar" e "editar" só quando o usuário pedir explicitamente; o app pede confirmação. 8) Não invente valores nem itens e não recomende investimentos específicos.';
 function prompt_(t) {
   return 'Você é o assistente financeiro pessoal e privado de ' + (P.nome || 'o usuário') + '. Responda em português do Brasil: curto, calmo, prático, realista e sem alarmismo.\n' + ctx() + '\nCategorias de gasto: ' + GC.join(', ') + '.\nCONVERSA RECENTE: ' +
     (HIST.slice(-4).map(x => 'Usuário: ' + x[0] + ' | Você: ' + x[1]).join('\n') || '(início)') + '\nMENSAGEM: ' + t + '\n\n' + SCHEMA;
@@ -292,9 +301,9 @@ function drawIns() {
   c.appendChild(h('div', 'hint', 'Orientação educativa gerada por IA, não é consultoria financeira.')); box.appendChild(c);
 }
 async function analisar() {
-  const b = $('#an'); b.disabled = true; setBtn(b, 'sparkle', 'Analisando…'); const hm = hoje().slice(0, 7), dados = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos: Math.round(sum(m, 'gasto')), entradas: Math.round(sum(m, 'entrada')), categorias: catsOf(m) }; });
+  const b = $('#an'); b.disabled = true; setBtn(b, 'sparkle', 'Analisando…'); const hm = hoje().slice(0, 7), dados = [-5, -4, -3, -2, -1, 0].map(i => { const m = shift(hm, i); return { mes: m, gastos: r2(sum(m, 'gasto')), fatura_cartao: r2(faturaEf(m)), entradas: r2(sum(m, 'entrada')), categorias: r2o(catsOf(m)) }; });
   const p = 'Você é um consultor financeiro pessoal didático e honesto de ' + (P.nome || 'o usuário') + '. Analise estes dados (português do Brasil, tom calmo e realista).\nRenda mensal: R$ ' + P.renda + '. Reserva: R$ ' + reservaTotal() + '. Faturas do cartão: ' + JSON.stringify(P.faturas) + '. Limites: ' + JSON.stringify(P.limites) + '. ' + rotina() +
-    '\nÚltimos 6 meses: ' + JSON.stringify(dados) + '\nMês atual: ' + hm + '.\nResponda SÓ JSON: {"nota":0 a 100,"resumo":"2 frases","pontos_fortes":["..."],"alertas":["..."],"dicas":[{"titulo":"...","texto":"...","economia_mensal_estimada":número}],"meta":"uma meta realista"}. Use só os dados fornecidos e não invente valores. Com poucos dados, diga isso e dê nota cautelosa. Considere a rotina de trabalho e estudo nas dicas. Sem recomendar investimentos específicos. Máximo 3 itens por lista.';
+    '\nNOTA: os gastos de cada mês já incluem a fatura do cartão e as entradas consideram a renda mensal informada quando o registrado for menor.\nÚltimos 6 meses: ' + JSON.stringify(dados) + '\nMês atual: ' + hm + '.\nResponda SÓ JSON: {"nota":0 a 100,"resumo":"2 frases","pontos_fortes":["..."],"alertas":["..."],"dicas":[{"titulo":"...","texto":"...","economia_mensal_estimada":número}],"meta":"uma meta realista"}. Use só os dados fornecidos e não invente valores. Com poucos dados, diga isso e dê nota cautelosa. Considere a rotina de trabalho e estudo nas dicas. Sem recomendar investimentos específicos. Máximo 3 itens por lista.';
   try { INS = await ai(p); drawIns(); } catch (e) { $('#in-r').textContent = 'A IA não respondeu. Detalhe: ' + (e.message || e); } b.disabled = false; setBtn(b, 'sparkle', 'Analisar novamente');
 }
 async function lancarIA() { const t = $('#ai-l').value.trim(); if (!t) return toast('Cole seus gastos primeiro'); $('#ai-l').value = ''; go('ai'); $('#inp').value = t; send(); }
@@ -332,11 +341,15 @@ async function savePlan() {
 
 /* ---------- navegação e eventos ---------- */
 const TT = { ai: ['Assistente', 'Converse comigo para registrar e entender o seu dinheiro'], home: ['Painel', 'Seu retrato financeiro em números e gráficos'], tx: ['Lançamentos', 'Tudo o que você registrou'], plan: ['Plano', 'Perfil, rotina, faturas e limites'], goals: ['Metas e dívidas', 'Seus objetivos e quanto os amigos te devem'] };
+const mq = window.matchMedia('(min-width:900px)');
+function navState() { const app = $('#app'); $('#burger').setAttribute('aria-expanded', String(mq.matches ? !app.classList.contains('nav-mini') : app.classList.contains('nav-open'))); }
+function toggleNav() { const app = $('#app'); if (mq.matches) { app.classList.toggle('nav-mini'); try { localStorage.setItem('mk_nav', app.classList.contains('nav-mini') ? 'mini' : 'full'); } catch (e) { } } else app.classList.toggle('nav-open'); navState(); }
+function closeNav() { $('#app').classList.remove('nav-open'); navState(); }
 function go(t) {
   tab = t; $$('main > section').forEach(s => s.hidden = s.id !== 't-' + t); $$('#nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   $('#pt').textContent = TT[t][0]; $('#ps').textContent = TT[t][1]; $('#mbar').hidden = !(t === 'home' || t === 'tx');
   if (t === 'ai') vm = hoje().slice(0, 7); if (t === 'plan') plan(); render();
-  $$('#t-' + t + ' .c').forEach((c, i) => { c.style.animation = 'none'; c.offsetHeight; c.style.animation = ''; c.style.animationDelay = i * .06 + 's'; }); window.scrollTo(0, 0);
+  $$('#t-' + t + ' .c').forEach((c, i) => { c.style.animation = 'none'; c.offsetHeight; c.style.animation = ''; c.style.animationDelay = i * .06 + 's'; }); window.scrollTo(0, 0); closeNav();
 }
 async function show(s) {
   ses = s; $('#login').hidden = !!s; $('#app').hidden = !s;
@@ -366,5 +379,7 @@ $('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = 
 ['Quanto gastei hoje?', 'Resumo do mês', 'Quais são meus compromissos dos próximos meses?', 'Quem me deve?', 'Onde posso economizar?', 'Posso gastar 80 hoje?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button'); b.innerHTML = IC('trendup') + 'Analisar minhas finanças'; b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
 document.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || $('#app').hidden || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; const map = { 1: 'ai', 2: 'home', 3: 'tx', 4: 'goals', 5: 'plan' }; if (map[e.key]) go(map[e.key]); else if (e.key === '/') { e.preventDefault(); go('ai'); $('#inp').focus(); } });
+$('#burger').onclick = toggleNav; $('#scrim').onclick = closeNav; mq.addEventListener('change', () => { closeNav(); }); document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+try { if (localStorage.getItem('mk_nav') === 'mini') $('#app').classList.add('nav-mini'); } catch (e) { } navState();
 hydrate();
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });

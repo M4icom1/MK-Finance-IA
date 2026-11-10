@@ -88,18 +88,78 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 @media(min-width:1500px){.main{max-width:1440px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.draw{stroke-dashoffset:0}.ar{opacity:1}}
+
+/* ===== menu: gaveta no celular, recolhível no computador ===== */
+.scrim{position:fixed;inset:0;z-index:4;background:rgba(2,5,12,.62);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .4s}
+#app.nav-open .scrim{opacity:1;pointer-events:auto}
+.side{width:252px;transform:translateX(-104%);transition:transform .55s cubic-bezier(.22,1,.36,1),width .5s cubic-bezier(.22,1,.36,1),padding .5s cubic-bezier(.22,1,.36,1);padding:calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));overflow:hidden}
+#app.nav-open .side{transform:none;box-shadow:24px 0 60px #000b}
+.main{margin-left:0;padding:0 calc(12px + env(safe-area-inset-right)) 40px calc(12px + env(safe-area-inset-left))}
+.bn,.side em{display:block;white-space:nowrap}.side button{justify-content:flex-start;padding:0 14px}
+.side nav button,.sf>*{opacity:0;transform:translateX(-16px);transition:opacity .4s,transform .5s cubic-bezier(.22,1,.36,1),background .2s,color .2s}
+#app.nav-open .side nav button,#app.nav-open .sf>*{opacity:1;transform:none;transition-delay:calc(var(--i,5)*55ms + 140ms),calc(var(--i,5)*55ms + 140ms),0s,0s}
+.side nav button:nth-child(1){--i:0}.side nav button:nth-child(2){--i:1}.side nav button:nth-child(3){--i:2}.side nav button:nth-child(4){--i:3}.side nav button:nth-child(5){--i:4}
+.me{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:var(--c2);margin-bottom:8px}.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2f6bff,#38bdf8);display:grid;place-items:center;font-weight:700;color:#fff;flex:none}
+.mt{min-width:0}.mt b{display:block;font-size:14px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mt small{color:var(--mut);font-size:12px}.kb{display:none}
+.ph{position:sticky;top:0;z-index:3;margin:0 calc(-12px - env(safe-area-inset-right)) 12px calc(-12px - env(safe-area-inset-left));padding:calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 10px calc(12px + env(safe-area-inset-left));background:linear-gradient(rgba(3,6,16,.94),rgba(3,6,16,.78));backdrop-filter:blur(14px)}
+.phl{display:flex;align-items:center;gap:10px;min-width:0}
+.burger{display:inline-flex;flex-direction:column;justify-content:center;gap:5px;width:42px;height:42px;min-height:42px;padding:0;background:var(--card);border:1px solid var(--bd);border-radius:14px;flex:none}
+.burger span{display:block;width:19px;height:2px;border-radius:2px;background:var(--fg);margin:0 auto;transition:transform .5s cubic-bezier(.22,1,.36,1),opacity .25s,width .3s}
+#app.nav-open .burger span:nth-child(1){transform:translateY(7px) rotate(45deg)}#app.nav-open .burger span:nth-child(2){opacity:0;transform:scaleX(.2)}#app.nav-open .burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+@media(min-width:900px){
+.scrim{display:none}
+.side{width:244px;transform:none;padding:calc(16px + env(safe-area-inset-top)) 14px 16px}
+.side nav button,.sf>*{opacity:1;transform:none}
+.main{margin-left:244px;padding:0 32px 50px;transition:margin-left .5s cubic-bezier(.22,1,.36,1)}
+.ph{margin:0 -32px 20px;padding:24px 32px 14px}
+.kb{display:block;font-size:11px;color:var(--mut);padding:0 6px 10px;line-height:1.4}
+#app.nav-mini .side{width:72px;padding-left:12px;padding-right:12px}#app.nav-mini .main{margin-left:72px}
+#app.nav-mini .bn,#app.nav-mini .side em,#app.nav-mini .me,#app.nav-mini .kb{display:none}#app.nav-mini .side button{justify-content:center;padding:0}
+#app.nav-mini .burger span:nth-child(2){width:11px}
+}
+/* ===== animações e ícones ===== */
+main>section:not([hidden]){animation:pg .5s cubic-bezier(.22,1,.36,1)}@keyframes pg{from{opacity:0}}
+.ic *{transition:stroke .2s}
+.ttl .ic *,.st i .ic *,.side button.on .ic *,.l.lab .ic *{stroke-dasharray:1;stroke-dashoffset:1;animation:icdraw 1s .15s cubic-bezier(.4,0,.2,1) forwards}@keyframes icdraw{to{stroke-dashoffset:0}}
+.side button.on .ic{animation:pop .55s cubic-bezier(.3,1.6,.5,1)}@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+.side button:hover .ic,.chips button:hover .ic,button:hover>.ic{transform:translateY(-1px) scale(1.12);transition:transform .25s}
+.l.lab{display:flex;gap:6px;align-items:center}.l.lab .ic{width:14px;height:14px;color:var(--ac)}
+.bd .tr i,.gl .tr i{position:relative;overflow:hidden}.bd .tr i::after,.gl .tr i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-100%);animation:sh 2.6s 1s infinite}@keyframes sh{to{transform:translateX(100%)}}
+.g .c .v,.g3 .c .v{transition:color .4s}
+.logo{transition:transform .5s cubic-bezier(.3,1.6,.5,1)}.logo:hover{transform:rotate(-8deg) scale(1.08)}
+.t{transition:background .2s,padding .2s,border-radius .2s}@media(hover:hover){.t:hover{background:#ffffff08;padding-left:6px;padding-right:6px;border-radius:12px}}
+/* ===== celular: tudo mais compacto ===== */
+@media(max-width:600px){
+body{font-size:14.5px}
+.c{padding:12px;border-radius:16px;margin-bottom:10px}.g{gap:8px}.g .c{padding:10px 11px}
+.v{font-size:17px}.big .v{font-size:24px}.g3 .v{font-size:13.5px}.l{font-size:11.5px}
+.ph h1{font-size:18px}.ph .l{font-size:12px}.mb span{min-width:88px;font-size:14px}.burger{width:40px;height:40px;min-height:40px}
+.ttl{font-size:14px;margin-bottom:6px}.ttl .ic{width:18px;height:18px}
+.hero2 h2{font-size:17px}.hero2{gap:10px}.tipd{font-size:13px;padding:10px;min-width:0}
+.st{font-size:13.5px;padding:7px 0;gap:9px}.st i{width:30px;height:30px;border-radius:10px}
+.t{padding:7px 0;font-size:14px}.t .ic2{width:32px;height:32px;border-radius:10px}
+button{min-height:40px;padding:0 13px;font-size:14px}button.s{min-height:34px}input,select,textarea{padding:10px;border-radius:11px}textarea{min-height:70px}
+.chips button{min-height:32px;font-size:12.5px;padding:0 11px}
+.m{font-size:14px;padding:8px 12px}#chat{height:min(44vh,400px);min-height:200px}
+.hero{gap:12px}.sc{width:76px;height:76px}.sc .v{font-size:21px}
+.dw{width:128px;height:128px}.dw .ct .v{font-size:14px}.lg{padding:6px;font-size:13px}
+.dy{height:96px}.tp{font-size:13px;padding:9px 11px}.gl{padding:9px 0}.bd{margin:8px 0}.bd .t{font-size:13px}
+.side{width:236px}
+}
+@media(prefers-reduced-motion:reduce){.ic *{stroke-dashoffset:0!important}.side nav button,.sf>*{opacity:1!important;transform:none!important}}
 </style></head><body>
 <div id="login" hidden><img class="cv" src="cover.svg" alt="MK Finance IA"><div class="lf"><h2>Bem-vindo de volta</h2><p class="hint" style="margin:0 0 12px">Entre para acessar as suas finanças.</p><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" class="full">Entrar</button><p class="hint" id="err"></p></div></div>
 <div id="app" hidden>
+<div class="scrim" id="scrim"></div>
 <aside class="side"><div class="brand"><img class="logo" src="logo.svg" alt=""><div class="bn"><b>MK Finance <i>IA</i></b><small id="hi"></small></div></div>
 <nav id="nav"><button data-t="ai" class="on" title="Assistente"><i data-ic="chat"></i><em>Assistente</em></button><button data-t="home" title="Painel"><i data-ic="chart"></i><em>Painel</em></button><button data-t="tx" title="Lançamentos"><i data-ic="receipt"></i><em>Lançamentos</em></button><button data-t="goals" title="Metas e dívidas"><i data-ic="gem"></i><em>Metas e dívidas</em></button><button data-t="plan" title="Plano"><i data-ic="sliders"></i><em>Plano</em></button></nav>
 <div class="sf"><div class="me"><span class="av" id="av"></span><div class="mt"><b id="mnm"></b><small>Plano pessoal</small></div></div><div class="kb">Atalhos: teclas 1 a 5 trocam de aba e / abre o chat.</div><button id="out" title="Sair"><i data-ic="logout"></i><em>Sair</em></button></div></aside>
 <main class="main">
-<header class="ph"><div><h1 id="pt"></h1><div class="l" id="ps"></div></div><div class="mb" id="mbar"><button class="s" id="mp" aria-label="Mês anterior"><i data-ic="left"></i></button><span id="ml"></span><button class="s" id="mn" aria-label="Próximo mês"><i data-ic="right"></i></button></div></header>
+<header class="ph"><div class="phl"><button class="burger" id="burger" aria-label="Abrir ou fechar o menu" aria-expanded="false"><span></span><span></span><span></span></button><div><h1 id="pt"></h1><div class="l" id="ps"></div></div></div><div class="mb" id="mbar"><button class="s" id="mp" aria-label="Mês anterior"><i data-ic="left"></i></button><span id="ml"></span><button class="s" id="mn" aria-label="Próximo mês"><i data-ic="right"></i></button></div></header>
 
 <section id="t-ai">
 <div class="c hero2"><div><h2 id="hl"></h2><div class="l" id="hs"></div></div><div class="tipd" id="tip-d"></div></div>
-<div class="g3"><div class="c"><div class="l">Saldo do mês</div><div class="v" id="a-s">–</div></div><div class="c"><div class="l">Gastos</div><div class="v neg" id="a-g">–</div></div><div class="c"><div class="l">Reserva</div><div class="v pos" id="a-r">–</div></div></div>
+<div class="g3"><div class="c"><div class="l lab"><i data-ic="scale"></i>Saldo do mês</div><div class="v" id="a-s">–</div></div><div class="c"><div class="l lab"><i data-ic="trenddown"></i>Gastos</div><div class="v neg" id="a-g">–</div></div><div class="c"><div class="l lab"><i data-ic="bank"></i>Reserva</div><div class="v pos" id="a-r">–</div></div></div>
 <div class="c sidec"><div class="ttl"><i data-ic="doc"></i>Agora mesmo</div><div id="story-s"></div></div>
 <div class="c chatc"><div class="chips" id="chips"></div><div id="chat"></div><div class="r"><input id="inp" placeholder="Ex.: gastei 150 no mercado" autocomplete="off" enterkeyhint="send"><button id="send" aria-label="Enviar"><i data-ic="send"></i></button></div></div>
 </section>
@@ -107,10 +167,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <section id="t-home" hidden>
 <div class="c hero"><div class="sc"><svg id="score" viewBox="0 0 42 42"></svg><div class="ct"><div class="v" id="sc-v">–</div><div class="l">saúde</div></div></div><div style="flex:1"><div class="ttl"><i data-ic="sparkle"></i>Saúde financeira</div><div id="in-r" class="hint">Receba um diagnóstico das suas finanças e dicas de como melhorar.</div><button id="an" class="full"><i data-ic="sparkle"></i>Analisar com IA</button></div></div>
 <div id="ins"></div>
-<div class="g"><div class="c big"><div class="l">Saldo do mês (entradas − gastos)</div><div class="v" id="v-saldo">–</div></div>
-<div class="c"><div class="l">Gastos</div><div class="v neg" id="v-g">–</div></div><div class="c"><div class="l">Entradas</div><div class="v pos" id="v-e">–</div></div>
-<div class="c"><div class="l">Fatura do cartão</div><div class="v" id="v-f">–</div></div><div class="c"><div class="l">Reserva cobre</div><div class="v" id="v-r">–</div></div>
-<div class="c"><div class="l">Taxa de poupança</div><div class="v" id="v-p">–</div></div><div class="c"><div class="l">Horas de trabalho gastas</div><div class="v" id="v-h">–</div></div></div>
+<div class="g"><div class="c big"><div class="l lab"><i data-ic="scale"></i>Saldo do mês (entradas − gastos)</div><div class="v" id="v-saldo">–</div></div>
+<div class="c"><div class="l lab" title="Inclui a fatura do cartão"><i data-ic="trenddown"></i>Gastos</div><div class="v neg" id="v-g">–</div></div><div class="c"><div class="l lab"><i data-ic="trendup"></i>Entradas</div><div class="v pos" id="v-e">–</div></div>
+<div class="c"><div class="l lab"><i data-ic="card"></i>Fatura do cartão</div><div class="v" id="v-f">–</div></div><div class="c"><div class="l lab"><i data-ic="bank"></i>Reserva cobre</div><div class="v" id="v-r">–</div></div>
+<div class="c"><div class="l lab"><i data-ic="leaf"></i>Taxa de poupança</div><div class="v" id="v-p">–</div></div><div class="c"><div class="l lab"><i data-ic="clock"></i>Horas de trabalho gastas</div><div class="v" id="v-h">–</div></div></div>
 <div class="c w5"><div class="ttl"><i data-ic="doc"></i>O que está acontecendo</div><div id="story"></div></div>
 <div class="c w7"><div class="ttl"><i data-ic="trendup"></i>Gastos × entradas (6 meses)</div><div class="l" id="ln-r"></div><div id="ln"></div></div>
 <div class="cols"><div class="c"><div class="ttl"><i data-ic="pie"></i>Para onde foi o dinheiro</div><div class="dn"><div class="dw"><svg id="donut" viewBox="0 0 42 42"></svg><div class="ct"><div class="l" id="dc-l"></div><div class="v" id="dc-v"></div></div></div><div id="leg"></div></div></div>
@@ -147,5 +207,5 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 </section>
 </main><div id="toast"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=11"></script><script src="app.js?v=11"></script>
+<script src="config.js?v=12"></script><script src="app.js?v=12"></script>
 </body></html>
