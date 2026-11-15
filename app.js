@@ -19,12 +19,18 @@ const ICONS = { chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 2
   bank: '<path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>', calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   trendup: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>', trenddown: '<path d="M3 7l6 6 4-4 8 8M15 17h6v-6"/>', leaf: '<path d="M5 19c0-9 5-14 15-14 0 10-5 15-14 15"/><path d="M5 19c3-5 6-8 10-10"/>',
   scale: '<path d="M12 4v16M6 20h12M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>', pie: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
-  download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.3 5 3.9 0 1.1-1.1 1.8-2.5 1.8-1.1 0-2-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>' };
+  download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', down: '<path d="M6 9l6 6 6-6"/>', coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.3 5 3.9 0 1.1-1.1 1.8-2.5 1.8-1.1 0-2-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>' };
 const IC = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || ICONS.box).replace(/<(path|circle|rect)\b/g, '<$1 pathLength="1"') + '</svg>';
 const lab = (n, t) => { const s = h('span', 'lab'); s.innerHTML = IC(n); s.appendChild(document.createTextNode(t)); return s; };
 const setBtn = (b, n, t) => { b.innerHTML = IC(n) + t; };
 const xbtn = () => { const b = h('button', 's'); b.innerHTML = IC('x'); b.title = 'Remover'; b.setAttribute('aria-label', 'Remover'); return b; };
-const hydrate = () => $$('[data-ic]').forEach(e => e.innerHTML = IC(e.dataset.ic));
+const mqM = window.matchMedia('(max-width:600px)');
+const hydrate = () => { $$('[data-ic]').forEach(e => e.innerHTML = IC(e.dataset.ic)); $$('.fold').forEach(c => { const t = c.querySelector('.ttl'); if (!t || t.querySelector('.chev')) return; const i = h('i', 'chev'); i.innerHTML = IC('down'); t.appendChild(i); t.onclick = () => { if (mqM.matches) c.classList.toggle('open'); }; }); };
+const MORE = { story: false, tips: false };
+const fixPh = () => { const i = $('#inp'); if (i) i.placeholder = mqM.matches ? 'Escreva ou fale um gasto' : 'Ex.: gastei 150 no mercado'; };
+function collapsible(el, key, keep) { const old = el.nextElementSibling; if (old && old.classList.contains('more')) old.remove(); const n = el.children.length; el.classList.toggle('collapsed', !MORE[key] && n > keep);
+  if (n > keep) { const b = h('button', 'more s'); b.textContent = MORE[key] ? 'Ver menos' : 'Ver mais (' + (n - keep) + ')'; b.onclick = () => { MORE[key] = !MORE[key]; collapsible(el, key, keep); }; el.after(b); } }
+const Rc = n => Math.abs(n) >= 10000 ? (n < 0 ? '-' : '') + 'R$ ' + (Math.abs(n) / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' mil' : R(n);
 const R = n => 'R$ ' + (+n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pad = n => String(n).padStart(2, '0');
 const hoje = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
@@ -149,13 +155,13 @@ async function safeAdd(items, dia, done) {
 /* ---------- renderização ---------- */
 function render() {
   const nome = P.nome || (ses ? ses.user.email.split('@')[0] : ''), hr = new Date().getHours();
-  $('#hi').textContent = nome; $('#av').textContent = nome.slice(0, 1).toUpperCase(); $('#mnm').textContent = nome; $('#ml').textContent = cap(mlabel(vm));
+  $('#hi').textContent = nome; $('#av').textContent = nome.slice(0, 1).toUpperCase(); $('#mnm').textContent = nome; $('#ml').textContent = mqM.matches ? cap(mlabel(vm, 1)).replace(/\.$/, '') + ' ' + vm.slice(0, 4) : cap(mlabel(vm));
   $('#hl').textContent = (hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + nome + '!';
   $('#hs').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const T = tips(); $('#tip-d').innerHTML = ''; $('#tip-d').append(lab('bulb', 'Dica do dia'), document.createTextNode(T[0]));
   const S = story(), box = (el, arr) => { el.innerHTML = ''; arr.forEach((x, i) => { const r = h('div', 'st ' + x.k), ic = h('i'); ic.innerHTML = IC(x.i); r.style.animationDelay = i * .08 + 's'; r.append(ic, h('div', '', x.t)); el.appendChild(r); }); };
-  box($('#story-s'), S.slice(0, 3)); box($('#story'), S);
-  const tp = $('#tips'); tp.innerHTML = ''; T.forEach((t, i) => { const d = h('div', 'tp', t); d.style.animationDelay = i * .1 + 's'; tp.appendChild(d); });
+  box($('#story-s'), S.slice(0, 3)); box($('#story'), S); collapsible($('#story'), 'story', 4);
+  const tp = $('#tips'); tp.innerHTML = ''; T.forEach((t, i) => { const d = h('div', 'tp', t); d.style.animationDelay = i * .1 + 's'; tp.appendChild(d); }); collapsible(tp, 'tips', 2);
   stats(); lineChart(); donut(); daily(); budgets(); list(); goalsView();
 }
 function stats() {
@@ -163,11 +169,11 @@ function stats() {
   cnt($('#v-saldo'), e - g); $('#v-saldo').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); cnt($('#v-g'), g); cnt($('#v-e'), e);
   $('#v-f').textContent = f ? R(f) : '–'; $('#v-r').textContent = reservaTotal() > 0 && av ? (reservaTotal() / av).toFixed(1).replace('.', ',') + ' meses' : '–';
   $('#v-p').textContent = e > 0 ? Math.round((e - g) / e * 100) + '%' : '–'; $('#v-h').textContent = vHora() && g ? (g / vHora()).toFixed(1).replace('.', ',') + ' h' : '–';
-  $('#a-s').textContent = R(e - g); $('#a-s').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); $('#a-g').textContent = R(g); $('#a-r').textContent = R(reservaTotal());
+  $('#a-s').textContent = Rc(e - g); $('#a-s').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); $('#a-g').textContent = Rc(g); $('#a-r').textContent = Rc(reservaTotal());
 }
 function lineChart() {
   const el = $('#ln'); el.innerHTML = ''; const ms = [-5, -4, -3, -2, -1, 0].map(i => shift(vm, i)), G = ms.map(m => sum(m, 'gasto')), E = ms.map(m => sum(m, 'entrada')), mx = Math.max(1, ...G, ...E),
-    W = 600, H = 210, pl = 12, pr = 12, pt = 14, pb = 28, x = i => pl + i * (W - pl - pr) / 5, y = v => pt + (H - pt - pb) * (1 - v / mx), rd = $('#ln-r');
+    W = Math.max(280, Math.round(el.clientWidth) || 600), H = W < 500 ? 200 : 210, pl = 14, pr = 14, pt = 14, pb = 30, x = i => pl + i * (W - pl - pr) / 5, y = v => pt + (H - pt - pb) * (1 - v / mx), rd = $('#ln-r');
   const s = sv('svg', { viewBox: '0 0 ' + W + ' ' + H }, el);
   s.innerHTML = '<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b81" stop-opacity=".35"/><stop offset="1" stop-color="#ff6b81" stop-opacity="0"/></linearGradient><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4dd4ff" stop-opacity=".35"/><stop offset="1" stop-color="#4dd4ff" stop-opacity="0"/></linearGradient></defs>';
   for (let i = 0; i < 4; i++) sv('line', { x1: pl, x2: W - pr, y1: pt + (H - pt - pb) * i / 3, y2: pt + (H - pt - pb) * i / 3, stroke: '#1d2a47', 'stroke-dasharray': '3 5' }, s);
@@ -178,8 +184,8 @@ function lineChart() {
     A.forEach((v, i) => sv('circle', { cx: x(i), cy: y(v), r: 4, fill: col, class: 'ar' }, s));
   });
   const show = i => rd.textContent = mlabel(ms[i]) + ': gastos ' + R(G[i]) + ' · entradas ' + R(E[i]) + ' · saldo ' + R(E[i] - G[i]); show(5);
-  ms.forEach((m, i) => { sv('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', fill: m === vm ? '#4d8dff' : '#8394b8', 'font-size': 13, 'font-weight': m === vm ? 700 : 400 }, s).textContent = mlabel(m, 1);
-    const r = sv('rect', { x: x(i) - 40, y: 0, width: 80, height: H, fill: 'transparent', style: 'cursor:pointer' }, s); r.onmouseenter = () => show(i); r.onclick = () => { vm = m; render(); }; });
+  ms.forEach((m, i) => { sv('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', fill: m === vm ? '#4d8dff' : '#8394b8', 'font-size': W < 500 ? 12.5 : 13, 'font-weight': m === vm ? 700 : 400 }, s).textContent = mlabel(m, 1);
+    const r = sv('rect', { x: x(i) - W / 12, y: 0, width: W / 6, height: H, fill: 'transparent', style: 'cursor:pointer' }, s); r.onmouseenter = () => show(i); r.onclick = () => { vm = m; render(); }; });
 }
 function donut() {
   const g = sum(vm, 'gasto'), by = catsOf(vm), arr = Object.entries(by).sort((a, b) => b[1] - a[1]), s = $('#donut'), lg = $('#leg'); s.innerHTML = ''; lg.innerHTML = '';
@@ -226,12 +232,13 @@ function editRow(r, x) {
   ok.onclick = async () => { const val = num(v.value); if (!(val > 0) || val >= 1e9) return toast('Valor inválido'); if (!vdate(dt.value)) return toast('Data inválida'); const ch = { valor: val, descricao: t.value.trim().slice(0, 80), dia: dt.value }; if (x.tipo === 'gasto') ch.categoria = c.value;
     const { error } = await sb.from('transactions').update(ch).eq('id', x.id); if (error) return toast('Erro: ' + error.message); await load(); toast('Lançamento atualizado'); };
 }
+function sub_(x, vh) { const sm = h('small', '', x.dia.slice(8) + '/' + x.dia.slice(5, 7) + ' · ' + ({ guardado: 'Guardado na reserva', resgate: 'Resgate da reserva' }[x.tipo] || x.categoria)); if (vh && x.tipo === 'gasto') { const sp = h('span', 'hrs', ' · ≈ ' + (x.valor / vh).toFixed(1).replace('.', ',') + ' h de trabalho'); sm.appendChild(sp); } return sm; }
 function list() {
   const el = $('#list'); el.innerHTML = ''; const vh = vHora(), rows = tx.filter(x => inM(x, vm) && (x.descricao + ' ' + x.categoria).toLowerCase().includes(busca));
   if (!rows.length && !(+P.faturas[vm] > 0)) el.innerHTML = '<span class="hint">Nenhum lançamento neste mês.</span>';
   { const fi = +P.faturas[vm] || 0; if (fi > 0 && !busca) { const r = h('div', 't'), ic = h('div', 'ic2'), t = h('div', 'tx'); ic.innerHTML = IC('card'); t.append(h('div', '', 'Fatura do cartão'), h('small', '', 'Informada no Plano e contada como gasto do mês' + (fatLanc(vm) > 0 ? ' · lançamentos da categoria somam ' + R(fatLanc(vm)) + ' (vale o maior valor)' : ''))); r.append(ic, t, h('b', '', R(fi))); el.appendChild(r); } }
   rows.forEach(x => { const r = h('div', 't'), ic = h('div', 'ic2'), t = h('div', 'tx'), v = h('b', x.tipo === 'gasto' ? '' : 'pos', ({ gasto: '−', entrada: '+' }[x.tipo] || '') + R(x.valor)), d = xbtn(), ed = h('button', 's'); ic.innerHTML = IC(ci(x.categoria)[0]); ed.innerHTML = IC('edit'); ed.title = 'Editar'; ed.setAttribute('aria-label', 'Editar'); ed.onclick = () => editRow(r, x);
-    t.append(h('div', '', x.descricao || x.categoria), h('small', '', x.dia.slice(8) + '/' + x.dia.slice(5, 7) + ' · ' + ({ guardado: 'Guardado na reserva', resgate: 'Resgate da reserva' }[x.tipo] || x.categoria) + (vh && x.tipo === 'gasto' ? ' · ≈ ' + (x.valor / vh).toFixed(1).replace('.', ',') + ' h de trabalho' : '')));
+    t.append(h('div', '', x.descricao || x.categoria), sub_(x, vh));
     d.onclick = async () => { const { error } = await sb.from('transactions').delete().eq('id', x.id); if (error) return toast('Erro ao remover: ' + error.message); const copy = { tipo: x.tipo, valor: x.valor, categoria: x.categoria, descricao: x.descricao, dia: x.dia }; await load(); toast('Lançamento removido', 'Desfazer', async () => { await add([copy]); }); }; r.append(ic, t, v, ed, d); el.appendChild(r); });
 }
 
@@ -469,7 +476,7 @@ $('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = 
 ['Quanto gastei hoje?', 'Resumo do mês', 'Quais são meus compromissos dos próximos meses?', 'Quem me deve?', 'Onde posso economizar?', 'Posso gastar 80 hoje?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button'); b.innerHTML = IC('trendup') + 'Analisar minhas finanças'; b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
 document.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || $('#app').hidden || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; const map = { 1: 'ai', 2: 'home', 3: 'tx', 4: 'goals', 5: 'plan' }; if (map[e.key]) go(map[e.key]); else if (e.key === '/') { e.preventDefault(); go('ai'); $('#inp').focus(); } });
-$('#burger').onclick = toggleNav; $('#scrim').onclick = closeNav; mq.addEventListener('change', () => { closeNav(); }); document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+$('#burger').onclick = toggleNav; $('#scrim').onclick = closeNav; mq.addEventListener('change', () => { closeNav(); }); mqM.addEventListener('change', () => { fixPh(); render(); }); fixPh(); document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
 try { if (localStorage.getItem('mk_nav') === 'mini') $('#app').classList.add('nav-mini'); } catch (e) { } navState();
 hydrate();
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });
