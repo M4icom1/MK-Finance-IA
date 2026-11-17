@@ -19,13 +19,14 @@ const ICONS = { chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 2
   bank: '<path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>', calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   trendup: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>', trenddown: '<path d="M3 7l6 6 4-4 8 8M15 17h6v-6"/>', leaf: '<path d="M5 19c0-9 5-14 15-14 0 10-5 15-14 15"/><path d="M5 19c3-5 6-8 10-10"/>',
   scale: '<path d="M12 4v16M6 20h12M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>', doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>', pie: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
-  download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', down: '<path d="M6 9l6 6 6-6"/>', coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.3 5 3.9 0 1.1-1.1 1.8-2.5 1.8-1.1 0-2-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>' };
+  download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', down: '<path d="M6 9l6 6 6-6"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.6 5 1.3 5 3.9 0 1.1-1.1 1.8-2.5 1.8-1.1 0-2-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>' };
 const IC = n => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || ICONS.box).replace(/<(path|circle|rect)\b/g, '<$1 pathLength="1"') + '</svg>';
 const lab = (n, t) => { const s = h('span', 'lab'); s.innerHTML = IC(n); s.appendChild(document.createTextNode(t)); return s; };
 const setBtn = (b, n, t) => { b.innerHTML = IC(n) + t; };
 const xbtn = () => { const b = h('button', 's'); b.innerHTML = IC('x'); b.title = 'Remover'; b.setAttribute('aria-label', 'Remover'); return b; };
 const mqM = window.matchMedia('(max-width:600px)');
 const hydrate = () => { $$('[data-ic]').forEach(e => e.innerHTML = IC(e.dataset.ic)); $$('.fold').forEach(c => { const t = c.querySelector('.ttl'); if (!t || t.querySelector('.chev')) return; const i = h('i', 'chev'); i.innerHTML = IC('down'); t.appendChild(i); t.onclick = () => { if (mqM.matches) c.classList.toggle('open'); }; }); };
+const money = (el, n) => { if (n == null) { el.textContent = '–'; return; } const tt = R(n); el.innerHTML = '<span class="cur">' + tt.slice(0, 2) + '</span> ' + tt.slice(3); };
 const MORE = { story: false, tips: false };
 const fixPh = () => { const i = $('#inp'); if (i) i.placeholder = mqM.matches ? 'Escreva ou fale um gasto' : 'Ex.: gastei 150 no mercado'; };
 function collapsible(el, key, keep) { const old = el.nextElementSibling; if (old && old.classList.contains('more')) old.remove(); const n = el.children.length; el.classList.toggle('collapsed', !MORE[key] && n > keep);
@@ -52,7 +53,7 @@ const blank = () => ({ nome: '', renda: 0, reserva: 0, faturas: {}, limites: {},
 let tx = [], P = blank(), ses = null, vm = hoje().slice(0, 7), tab = 'ai', tipo = 'gasto', sel = null, FR = [], busca = '', INS = null;
 
 const toast = (t, label, fn) => { const e = $('#toast'); e.textContent = t; if (label) { const b = h('button', 's', label); b.style.marginLeft = '10px'; b.onclick = () => { e.classList.remove('on'); fn(); }; e.appendChild(b); e.style.pointerEvents = 'auto'; } else e.style.pointerEvents = 'none'; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), label ? 7000 : 2600); };
-const cnt = (el, v) => { const a = +el.dataset.v || 0, t0 = performance.now(); el.dataset.v = v; const f = t => { const k = Math.min(1, (t - t0) / 600); el.textContent = R(a + (v - a) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+const cnt = (el, v) => { const a = +el.dataset.v || 0, t0 = performance.now(); el.dataset.v = v; const f = t => { const k = Math.min(1, (t - t0) / 600); const tt = R(a + (v - a) * (1 - Math.pow(1 - k, 3))); el.innerHTML = '<span class="cur">' + tt.slice(0, 2) + '</span> ' + tt.slice(3); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
 const celebrate = k => { for (let i = 0; i < 10; i++) { const s = h('span', 'fx'); s.innerHTML = IC(k); s.style.left = (30 + Math.random() * 55) + '%'; s.style.animationDelay = Math.random() * .4 + 's'; document.body.appendChild(s); setTimeout(() => s.remove(), 2100); } };
 const inM = (x, m) => x.dia.slice(0, 7) === m;
 const sumRaw = (m, t) => tx.filter(x => inM(x, m) && x.tipo === t).reduce((a, x) => a + +x.valor, 0);
@@ -156,20 +157,31 @@ async function safeAdd(items, dia, done) {
 function render() {
   const nome = P.nome || (ses ? ses.user.email.split('@')[0] : ''), hr = new Date().getHours();
   $('#hi').textContent = nome; $('#av').textContent = nome.slice(0, 1).toUpperCase(); $('#mnm').textContent = nome; $('#ml').textContent = mqM.matches ? cap(mlabel(vm, 1)).replace(/\.$/, '') + ' ' + vm.slice(0, 4) : cap(mlabel(vm));
-  $('#hl').textContent = (hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite') + ', ' + nome + '!';
+  { const hl = $('#hl'); hl.textContent = ''; const em = h('em', '', nome); hl.append((hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite') + ', ', em, '!'); $('#av2').textContent = nome.slice(0, 1).toUpperCase(); $('#mn3').textContent = nome; }
   $('#hs').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const T = tips(); $('#tip-d').innerHTML = ''; $('#tip-d').append(lab('bulb', 'Dica do dia'), document.createTextNode(T[0]));
   const S = story(), box = (el, arr) => { el.innerHTML = ''; arr.forEach((x, i) => { const r = h('div', 'st ' + x.k), ic = h('i'); ic.innerHTML = IC(x.i); r.style.animationDelay = i * .08 + 's'; r.append(ic, h('div', '', x.t)); el.appendChild(r); }); };
   box($('#story-s'), S.slice(0, 3)); box($('#story'), S); collapsible($('#story'), 'story', 4);
   const tp = $('#tips'); tp.innerHTML = ''; T.forEach((t, i) => { const d = h('div', 'tp', t); d.style.animationDelay = i * .1 + 's'; tp.appendChild(d); }); collapsible(tp, 'tips', 2);
-  stats(); lineChart(); donut(); daily(); budgets(); list(); goalsView();
+  stats(); spark(); lineChart(); donut(); daily(); budgets(); list(); goalsView();
 }
 function stats() {
   const g = sum(vm, 'gasto'), e = sum(vm, 'entrada'), f = faturaEf(vm), av = avgG();
-  cnt($('#v-saldo'), e - g); $('#v-saldo').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); cnt($('#v-g'), g); cnt($('#v-e'), e);
-  $('#v-f').textContent = f ? R(f) : '–'; $('#v-r').textContent = reservaTotal() > 0 && av ? (reservaTotal() / av).toFixed(1).replace('.', ',') + ' meses' : '–';
+  cnt($('#v-saldo'), e - g); $('#v-sub').textContent = 'Entradas ' + R(e) + ' · Gastos ' + R(g); $('#v-saldo').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); cnt($('#v-g'), g); cnt($('#v-e'), e);
+  money($('#v-f'), f ? f : null); $('#v-r').textContent = reservaTotal() > 0 && av ? (reservaTotal() / av).toFixed(1).replace('.', ',') + ' meses' : '–';
   $('#v-p').textContent = e > 0 ? Math.round((e - g) / e * 100) + '%' : '–'; $('#v-h').textContent = vHora() && g ? (g / vHora()).toFixed(1).replace('.', ',') + ' h' : '–';
   $('#a-s').textContent = Rc(e - g); $('#a-s').className = 'v ' + (e - g >= 0 ? 'pos' : 'neg'); $('#a-g').textContent = Rc(g); $('#a-r').textContent = Rc(reservaTotal());
+}
+function spark() {
+  const el = $('#spark'); if (!el) return; el.innerHTML = ''; const W = Math.round(el.clientWidth); if (!W) return;
+  const ms = [-5, -4, -3, -2, -1, 0].map(i => shift(vm, i)), V = ms.map(m => sum(m, 'entrada') - sum(m, 'gasto')), mn = Math.min(0, ...V), mx = Math.max(1, ...V), H = 118, pd = 8, x = i => pd + i * (W - 2 * pd) / 5, y = v => pd + (H - 2 * pd - 22) * (1 - (v - mn) / ((mx - mn) || 1));
+  const s = sv('svg', { viewBox: '0 0 ' + W + ' ' + H }, el); s.innerHTML = '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4d8dff" stop-opacity=".5"/><stop offset="1" stop-color="#4d8dff" stop-opacity="0"/></linearGradient></defs>';
+  const d = ms.map((_, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(V[i])).join(' '), base = H - 22;
+  sv('path', { d: d + ' L' + x(5) + ' ' + base + ' L' + x(0) + ' ' + base + 'Z', fill: 'url(#sg)', class: 'ar' }, s);
+  sv('path', { d, fill: 'none', stroke: '#8fbcff', 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', pathLength: 1, class: 'draw' }, s);
+  sv('circle', { cx: x(5), cy: y(V[5]), r: 5, fill: '#fff', class: 'ar' }, s);
+  [[0, 'start', mlabel(ms[0], 1)], [5, 'end', mlabel(ms[5], 1)]].forEach(([i, an, t]) => { sv('text', { x: i ? W - pd : pd, y: H - 4, 'text-anchor': an, fill: '#8394b8', 'font-size': 11, 'font-family': 'ui-monospace,Menlo,monospace', 'letter-spacing': '1' }, s).textContent = t.replace('.', '').toUpperCase(); });
+  sv('text', { x: W / 2, y: H - 4, 'text-anchor': 'middle', fill: '#8394b8', 'font-size': 11, 'font-family': 'ui-monospace,Menlo,monospace', 'letter-spacing': '1' }, s).textContent = 'SALDO POR MÊS';
 }
 function lineChart() {
   const el = $('#ln'); el.innerHTML = ''; const ms = [-5, -4, -3, -2, -1, 0].map(i => shift(vm, i)), G = ms.map(m => sum(m, 'gasto')), E = ms.map(m => sum(m, 'entrada')), mx = Math.max(1, ...G, ...E),
@@ -476,7 +488,10 @@ $('#ai-test').onclick = async () => { P.gk = $('#p-k').value.trim(); P.modelo = 
 ['Quanto gastei hoje?', 'Resumo do mês', 'Quais são meus compromissos dos próximos meses?', 'Quem me deve?', 'Onde posso economizar?', 'Posso gastar 80 hoje?'].forEach(t => { const b = h('button', '', t); b.onclick = () => { $('#inp').value = t; send(); }; $('#chips').appendChild(b); });
 { const b = h('button'); b.innerHTML = IC('trendup') + 'Analisar minhas finanças'; b.onclick = () => { go('home'); analisar(); }; $('#chips').appendChild(b); }
 document.addEventListener('keydown', e => { if (e.ctrlKey || e.metaKey || e.altKey || $('#app').hidden || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; const map = { 1: 'ai', 2: 'home', 3: 'tx', 4: 'goals', 5: 'plan' }; if (map[e.key]) go(map[e.key]); else if (e.key === '/') { e.preventDefault(); go('ai'); $('#inp').focus(); } });
-$('#burger').onclick = toggleNav; $('#scrim').onclick = closeNav; mq.addEventListener('change', () => { closeNav(); }); mqM.addEventListener('change', () => { fixPh(); render(); }); fixPh(); document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+const closeU = () => { $('#umenu').hidden = true; };
+$('#avbtn').onclick = e => { e.stopPropagation(); $('#umenu').hidden = !$('#umenu').hidden; }; $('#out2').onclick = () => { closeU(); $('#out').click(); }; $('#sbtn').onclick = () => { go('tx'); setTimeout(() => $('#q').focus(), 300); };
+document.addEventListener('click', e => { if (!e.target.closest('#umenu')) closeU(); });
+$('#burger').onclick = toggleNav; $('#scrim').onclick = closeNav; mq.addEventListener('change', () => { closeNav(); }); mqM.addEventListener('change', () => { fixPh(); render(); }); fixPh(); document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeNav(); closeU(); } });
 try { if (localStorage.getItem('mk_nav') === 'mini') $('#app').classList.add('nav-mini'); } catch (e) { } navState();
 hydrate();
 sb.auth.getSession().then(({ data }) => show(data.session)); sb.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_IN' && ses && s && ses.user.id === s.user.id) return; if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT') show(s); });

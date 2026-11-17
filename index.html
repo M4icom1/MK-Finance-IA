@@ -204,16 +204,63 @@ button{min-height:48px;padding:0 18px;font-size:15.5px;border-radius:14px}button
 .f .l{font-size:13px}
 }
 @media(max-width:360px){.g .c{flex-basis:140px}.ph h1{font-size:21px}.mb span{font-size:13px;padding:0 4px}.v{font-size:19px}}
+
+:root{--serif:ui-serif,"Iowan Old Style","Noto Serif","Palatino Linotype",Georgia,serif;--mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace}
+.mlogo,.pha,.sub,.spark{display:none}.hero2 h2 em{font-style:normal}
+/* ===== celular v3: modelo com barra inferior flutuante ===== */
+@media(max-width:600px){
+.side{top:auto;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:auto;height:74px;transform:none!important;flex-direction:row;align-items:center;gap:0;padding:7px;border:1px solid #243558;border-radius:30px;background:rgba(8,14,30,.92);backdrop-filter:blur(20px);box-shadow:0 18px 50px #000c;overflow:visible;z-index:6}
+#app.nav-open .side{box-shadow:0 18px 50px #000c}
+.brand,.sf,.scrim,.burger{display:none!important}
+.side nav{flex-direction:row;flex:1;width:100%;gap:2px}
+.side nav button{flex:1;flex-direction:column;gap:3px;height:60px;padding:0 2px;border-radius:24px;opacity:1!important;transform:none!important;justify-content:center;align-items:center;color:var(--mut)}
+.side nav button em{display:none}.side nav button::after{content:attr(data-short);font-size:10.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.side nav button .ic{width:23px;height:23px}
+.side nav button.on{background:linear-gradient(135deg,#3b7bff,#4d8dff);color:#fff;box-shadow:0 10px 26px #3b7bff66}.side nav button.on::before{display:none}
+.main{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+/* cabeçalho */
+.ph{position:static;margin:0 0 16px;padding:calc(16px + env(safe-area-inset-top)) 0 0;background:none;backdrop-filter:none;flex-wrap:wrap;gap:12px;align-items:center}
+.phl{flex:1;min-width:0;gap:12px}.mlogo{display:block;width:46px;height:46px;border-radius:15px;flex:none;box-shadow:0 10px 26px #3b7bff55}
+.ph h1{font-family:var(--serif);font-weight:500;font-size:27px;letter-spacing:-.01em;line-height:1.1}
+.pha{display:flex;align-items:center;gap:6px;position:relative}
+.ib{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:transparent;color:var(--fg);box-shadow:none}.ib .ic{width:23px;height:23px}
+.avbtn{width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;background:linear-gradient(135deg,#2f6bff,#38bdf8);border:3px solid #17356f;color:#fff;font-weight:700;font-size:17px}
+.umenu{position:absolute;top:58px;right:0;z-index:8;min-width:230px;background:#0d1528;border:1px solid #243558;border-radius:20px;padding:14px;box-shadow:0 24px 60px #000d;animation:up .25s both}
+.umenu .mt{padding:2px 4px 12px}.umenu .mt b{font-size:16px}.umenu button{width:100%;justify-content:flex-start;background:var(--c2);color:var(--fg)}
+#mbar{order:9;flex:1 1 100%;justify-content:space-between;margin:0}.mb span{flex:1;text-align:center;font-size:14px}
+/* saudação em serifa */
+.hero2{background:none;border:0;box-shadow:none;padding:4px 2px 0;margin-bottom:16px}
+.hero2 h2{font-family:var(--serif);font-weight:500;font-size:36px;line-height:1.08;letter-spacing:-.02em}.hero2 h2 em{font-style:italic;color:var(--pos)}.hero2 .l{font-size:15px;margin-top:8px}
+.g3 .l{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase}.g3 .v{font-family:var(--serif);font-weight:500;font-size:18px}
+/* Painel: cartão-hero + grade de 2 colunas */
+#t-home:not([hidden]){display:flex;flex-direction:column}#t-home>.g{order:1}#t-home>.hero{order:2}#t-home>#ins{order:3}#t-home>.w5{order:4}#t-home>.w7{order:5}#t-home>.cols{order:6}#t-home>.w6{order:7}
+.g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;overflow:visible;scroll-snap-type:none;margin:0 0 16px;padding:0}
+.g .c{flex:none;padding:16px;border-radius:24px}
+.g .big{grid-column:1/-1;padding:22px 20px 18px;border-radius:30px;background:linear-gradient(160deg,#10306a,#070d1c 72%)!important;border-color:#2a4478}
+.g .l.lab{flex-direction:row-reverse;justify-content:space-between;align-items:flex-start;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;line-height:1.4;margin-bottom:14px;color:var(--mut)}
+.g .l.lab i{width:38px;height:38px;border-radius:12px;background:#ffffff10;display:grid;place-items:center;color:var(--pos);flex:none}.g .l.lab .ic{width:18px;height:18px}
+.g .v{font-family:var(--serif);font-weight:500;font-size:29px;letter-spacing:-.02em;line-height:1.1}.g .big .v{font-size:48px}.cur{font-size:.5em;opacity:.7;margin-right:5px;font-weight:500}
+.sub{display:block;font-size:14px;color:var(--mut);margin-top:8px}.spark{display:block;margin-top:18px}.spark svg{display:block;width:100%;height:auto}
+/* tamanhos ao redor da barra */
+#p-save{bottom:calc(100px + env(safe-area-inset-bottom))}#toast{bottom:calc(106px + env(safe-area-inset-bottom))}
+.chatc{min-height:0}#chat{flex:none;height:calc(100dvh - 526px);min-height:200px;max-height:none}
+}
+@media(max-width:600px) and (max-height:760px){
+.ph{padding-top:calc(10px + env(safe-area-inset-top));margin-bottom:10px}.mlogo{width:40px;height:40px;border-radius:13px}.ph h1{font-size:24px}
+.hero2{margin-bottom:8px}.hero2 h2{font-size:27px}.hero2 .l{display:none}
+.g3{margin-bottom:8px}.g3 .c{padding:9px 11px}
+.chatc{min-height:0;padding:12px}#chat{flex:none;height:calc(100dvh - 452px);min-height:110px;margin:8px 0}
+}
 @media(prefers-reduced-motion:reduce){.ic *{stroke-dashoffset:0!important}.side nav button,.sf>*{opacity:1!important;transform:none!important}}
 </style></head><body>
 <div id="login" hidden><img class="cv" src="cover.svg" alt="MK Finance IA"><div class="lf"><h2>Bem-vindo de volta</h2><p class="hint" style="margin:0 0 12px">Entre para acessar as suas finanças.</p><input id="em" type="email" placeholder="E-mail" autocomplete="username"><input id="pw" type="password" placeholder="Senha" autocomplete="current-password"><button id="go" class="full">Entrar</button><p class="hint" id="err"></p></div></div>
 <div id="app" hidden>
 <div class="scrim" id="scrim"></div>
 <aside class="side"><div class="brand"><img class="logo" src="logo.svg" alt=""><div class="bn"><b>MK Finance <i>IA</i></b><small id="hi"></small></div></div>
-<nav id="nav"><button data-t="ai" class="on" title="Assistente"><i data-ic="chat"></i><em>Assistente</em></button><button data-t="home" title="Painel"><i data-ic="chart"></i><em>Painel</em></button><button data-t="tx" title="Lançamentos"><i data-ic="receipt"></i><em>Lançamentos</em></button><button data-t="goals" title="Metas e dívidas"><i data-ic="gem"></i><em>Metas e dívidas</em></button><button data-t="plan" title="Plano"><i data-ic="sliders"></i><em>Plano</em></button></nav>
+<nav id="nav"><button data-short="Assistente" data-t="ai" class="on" title="Assistente"><i data-ic="chat"></i><em>Assistente</em></button><button data-short="Painel" data-t="home" title="Painel"><i data-ic="chart"></i><em>Painel</em></button><button data-short="Lançam." data-t="tx" title="Lançamentos"><i data-ic="receipt"></i><em>Lançamentos</em></button><button data-short="Metas" data-t="goals" title="Metas e dívidas"><i data-ic="gem"></i><em>Metas e dívidas</em></button><button data-short="Plano" data-t="plan" title="Plano"><i data-ic="sliders"></i><em>Plano</em></button></nav>
 <div class="sf"><div class="me"><span class="av" id="av"></span><div class="mt"><b id="mnm"></b><small>Plano pessoal</small></div></div><div class="kb">Atalhos: teclas 1 a 5 trocam de aba e / abre o chat.</div><button id="out" title="Sair"><i data-ic="logout"></i><em>Sair</em></button></div></aside>
 <main class="main">
-<header class="ph"><div class="phl"><button class="burger" id="burger" aria-label="Abrir ou fechar o menu" aria-expanded="false"><span></span><span></span><span></span></button><div><h1 id="pt"></h1><div class="l" id="ps"></div></div></div><div class="mb" id="mbar"><button class="s" id="mp" aria-label="Mês anterior"><i data-ic="left"></i></button><span id="ml"></span><button class="s" id="mn" aria-label="Próximo mês"><i data-ic="right"></i></button></div></header>
+<header class="ph"><div class="phl"><img class="mlogo" src="logo.svg" alt=""><button class="burger" id="burger" aria-label="Abrir ou fechar o menu" aria-expanded="false"><span></span><span></span><span></span></button><div><h1 id="pt"></h1><div class="l" id="ps"></div></div></div><div class="pha"><button class="ib" id="sbtn" aria-label="Buscar lançamentos"><i data-ic="search"></i></button><button class="avbtn" id="avbtn" aria-label="Conta"><span id="av2"></span></button><div class="umenu" id="umenu" hidden><div class="mt"><b id="mn3"></b><small>Plano pessoal</small></div><button id="out2"><i data-ic="logout"></i>Sair</button></div></div><div class="mb" id="mbar"><button class="s" id="mp" aria-label="Mês anterior"><i data-ic="left"></i></button><span id="ml"></span><button class="s" id="mn" aria-label="Próximo mês"><i data-ic="right"></i></button></div></header>
 
 <section id="t-ai">
 <div class="c hero2"><div><h2 id="hl"></h2><div class="l" id="hs"></div></div><div class="tipd" id="tip-d"></div></div>
@@ -225,7 +272,7 @@ button{min-height:48px;padding:0 18px;font-size:15.5px;border-radius:14px}button
 <section id="t-home" hidden>
 <div class="c hero"><div class="sc"><svg id="score" viewBox="0 0 42 42"></svg><div class="ct"><div class="v" id="sc-v">–</div><div class="l">saúde</div></div></div><div style="flex:1"><div class="ttl"><i data-ic="sparkle"></i>Saúde financeira</div><div id="in-r" class="hint">Receba um diagnóstico das suas finanças e dicas de como melhorar.</div><button id="an" class="full"><i data-ic="sparkle"></i>Analisar com IA</button></div></div>
 <div id="ins"></div>
-<div class="g"><div class="c big"><div class="l lab"><i data-ic="scale"></i>Saldo do mês (entradas − gastos)</div><div class="v" id="v-saldo">–</div></div>
+<div class="g"><div class="c big"><div class="l lab"><i data-ic="scale"></i>Saldo do mês (entradas − gastos)</div><div class="v" id="v-saldo">–</div><div class="sub" id="v-sub"></div><div class="spark" id="spark"></div></div>
 <div class="c"><div class="l lab" title="Inclui a fatura do cartão"><i data-ic="trenddown"></i>Gastos</div><div class="v neg" id="v-g">–</div></div><div class="c"><div class="l lab"><i data-ic="trendup"></i>Entradas</div><div class="v pos" id="v-e">–</div></div>
 <div class="c"><div class="l lab"><i data-ic="card"></i>Fatura do cartão</div><div class="v" id="v-f">–</div></div><div class="c"><div class="l lab"><i data-ic="bank"></i>Reserva cobre</div><div class="v" id="v-r">–</div></div>
 <div class="c"><div class="l lab"><i data-ic="leaf"></i>Taxa de poupança</div><div class="v" id="v-p">–</div></div><div class="c"><div class="l lab"><i data-ic="clock"></i>Horas de trabalho gastas</div><div class="v" id="v-h">–</div></div></div>
@@ -267,5 +314,5 @@ button{min-height:48px;padding:0 18px;font-size:15.5px;border-radius:14px}button
 </section>
 </main><div id="toast"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=20"></script><script src="app.js?v=20"></script>
+<script src="config.js?v=24"></script><script src="app.js?v=24"></script>
 </body></html>
